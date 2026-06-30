@@ -111,3 +111,15 @@ def test_main_window_status_bar_warns_when_project_path_missing(tmp_path, monkey
 
     window.close()
     app.processEvents()
+
+
+def test_light_stylesheet_contains_modern_selectors():
+    """验证现代化界面依赖的关键样式选择器存在。"""
+    from command_launcher.ui.styles import LIGHT_STYLESHEET
+
+    assert "QFrame#sidebarPanel" in LIGHT_STYLESHEET
+    assert "QFrame#contentPanel" in LIGHT_STYLESHEET
+    assert 'QPushButton[variant="primary"]' in LIGHT_STYLESHEET
+    assert 'QPushButton[variant="secondary"]' in LIGHT_STYLESHEET
+    assert 'QPushButton[variant="danger"]' in LIGHT_STYLESHEET
+    assert "QTabWidget::pane" in LIGHT_STYLESHEET
