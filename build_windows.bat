@@ -4,6 +4,17 @@ setlocal
 
 pushd "%~dp0"
 
+set "BUILD_TMP=%~dp0.build_tmp"
+if not exist "%BUILD_TMP%\temp" mkdir "%BUILD_TMP%\temp"
+if not exist "%BUILD_TMP%\pip-cache" mkdir "%BUILD_TMP%\pip-cache"
+set "TEMP=%BUILD_TMP%\temp"
+set "TMP=%BUILD_TMP%\temp"
+set "PIP_CACHE_DIR=%BUILD_TMP%\pip-cache"
+set "_PYI_ARCHIVE_FILE="
+set "_PYI_APPLICATION_HOME_DIR="
+set "_PYI_PARENT_PROCESS_LEVEL="
+set "PYINSTALLER_RESET_ENVIRONMENT=1"
+
 echo ========================================
 echo 命令启动器 Windows 打包
 echo ========================================
@@ -41,6 +52,9 @@ if errorlevel 1 goto install_failed
 
 echo.
 echo [3/3] 打包 Windows exe...
+tasklist /FI "IMAGENAME eq CommandLauncher.exe" 2>nul | find /I "CommandLauncher.exe" >nul
+if not errorlevel 1 goto app_running
+
 %PYTHON_CMD% -m PyInstaller --windowed --onedir --name CommandLauncher src\command_launcher\main.py --noconfirm
 if errorlevel 1 goto build_failed
 
@@ -71,6 +85,10 @@ goto fail
 
 :build_failed
 echo 打包失败。
+goto fail
+
+:app_running
+echo 请先关闭正在运行的 CommandLauncher.exe，然后重新打包。
 goto fail
 
 :fail
