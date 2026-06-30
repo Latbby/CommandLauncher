@@ -117,12 +117,23 @@ def test_light_stylesheet_contains_modern_selectors():
     """验证现代化界面依赖的关键样式选择器存在。"""
     from command_launcher.ui.styles import LIGHT_STYLESHEET
 
+    # 面板无边框
     assert "QFrame#sidebarPanel" in LIGHT_STYLESHEET
     assert "QFrame#contentPanel" in LIGHT_STYLESHEET
+    assert "border: none;" in LIGHT_STYLESHEET
+    # 按钮变体
     assert 'QPushButton[variant="primary"]' in LIGHT_STYLESHEET
     assert 'QPushButton[variant="secondary"]' in LIGHT_STYLESHEET
     assert 'QPushButton[variant="danger"]' in LIGHT_STYLESHEET
+    # Tab 下划线指示器
     assert "QTabWidget::pane" in LIGHT_STYLESHEET
+    assert "border-bottom: 2px solid transparent" in LIGHT_STYLESHEET
+    assert "border-bottom: 2px solid #2563eb" in LIGHT_STYLESHEET
+    # 终端面板样式
+    assert "QFrame#terminalPanel" in LIGHT_STYLESHEET
+    assert "QTabWidget#terminalTabs" in LIGHT_STYLESHEET
+    assert "QPlainTextEdit#terminalOutput" in LIGHT_STYLESHEET
+    assert "QSplitter#contentSplitter" in LIGHT_STYLESHEET
 
 
 def test_double_click_global_command_runs_from_selected_project(tmp_path, monkeypatch):
