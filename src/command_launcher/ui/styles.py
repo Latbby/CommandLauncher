@@ -19,7 +19,6 @@ QFrame#contentPanel {
 
 QSplitter#mainSplitter::handle {
   background: transparent;
-  width: 20px;
 }
 
 /* ── 标签基础 ── */

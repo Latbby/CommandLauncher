@@ -67,8 +67,8 @@ class _CommandItemWidget(QWidget):
         self.setStyleSheet("background: transparent;")
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(8, 5, 6, 5)
-        layout.setSpacing(6)
+        layout.setContentsMargins(10, 4, 8, 4)
+        layout.setSpacing(8)
 
         # 全局标签
         if is_global:
@@ -176,6 +176,8 @@ class MainWindow(QMainWindow):
 
         self.main_splitter.setObjectName("mainSplitter")
         self.main_splitter.setChildrenCollapsible(False)
+        # 面板之间的空隙用底色 #eeede8 填充
+        self.main_splitter.setHandleWidth(18)
 
         sidebar = self._build_sidebar()
         content = self._build_content_panel()
@@ -232,8 +234,8 @@ class MainWindow(QMainWindow):
         content = QFrame()
         content.setObjectName("contentPanel")
         content_layout = QVBoxLayout(content)
-        content_layout.setContentsMargins(18, 18, 18, 18)
-        content_layout.setSpacing(14)
+        content_layout.setContentsMargins(18, 18, 18, 14)
+        content_layout.setSpacing(8)
 
         self.project_name.setObjectName("projectTitle")
         self.project_path.setObjectName("projectPath")
@@ -275,8 +277,8 @@ class MainWindow(QMainWindow):
         """
         area = QWidget()
         layout = QVBoxLayout(area)
-        layout.setContentsMargins(0, 8, 0, 0)
-        layout.setSpacing(10)
+        layout.setContentsMargins(0, 4, 0, 0)
+        layout.setSpacing(6)
 
         # ── 顶部栏：标题 + 添加按钮 ──
         top_bar = QHBoxLayout()
@@ -292,6 +294,7 @@ class MainWindow(QMainWindow):
         self.add_command_button.setProperty("variant", "secondary")
 
         add_menu = QMenu(self)
+        add_menu.addAction("添加项目命令", lambda: self._add_command(global_command=False))
         add_menu.addAction("添加全局命令", lambda: self._add_command(global_command=True))
         self.add_command_button.setMenu(add_menu)
         # 主按钮点击默认添加项目命令
