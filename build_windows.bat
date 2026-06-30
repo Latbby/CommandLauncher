@@ -23,6 +23,17 @@ echo.
 set "VENV_PYTHON=.venv\Scripts\python.exe"
 set "BOOTSTRAP_PYTHON=python"
 
+echo [1/4] 更新 master 分支...
+where git >nul 2>nul
+if errorlevel 1 goto git_missing
+
+git checkout master
+if errorlevel 1 goto git_update_failed
+
+git pull --ff-only origin master
+if errorlevel 1 goto git_update_failed
+
+echo.
 if exist "%VENV_PYTHON%" goto use_venv
 
 echo 未找到当前项目虚拟环境，正在创建 .venv...
@@ -41,17 +52,17 @@ if errorlevel 1 goto venv_failed
 :use_venv
 set "PYTHON_CMD=%VENV_PYTHON%"
 
-echo [1/3] 使用 Python:
+echo [2/4] 使用 Python:
 %PYTHON_CMD% --version
 if errorlevel 1 goto python_failed
 
 echo.
-echo [2/3] 安装或更新项目依赖...
+echo [3/4] 安装或更新项目依赖...
 %PYTHON_CMD% -m pip install -e ".[dev]"
 if errorlevel 1 goto install_failed
 
 echo.
-echo [3/3] 打包 Windows exe...
+echo [4/4] 打包 Windows exe...
 tasklist /FI "IMAGENAME eq CommandLauncher.exe" 2>nul | find /I "CommandLauncher.exe" >nul
 if not errorlevel 1 goto app_running
 
@@ -69,6 +80,14 @@ exit /b 0
 
 :python_missing
 echo 未找到 Python。请先安装 Python，并勾选 Add Python to PATH。
+goto fail
+
+:git_missing
+echo 未找到 Git。请先安装 Git，并确保 git 命令可用。
+goto fail
+
+:git_update_failed
+echo 更新 master 分支失败。请确认当前工作区没有未提交改动，并检查网络或远端仓库配置。
 goto fail
 
 :venv_failed

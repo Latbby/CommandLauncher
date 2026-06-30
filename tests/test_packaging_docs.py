@@ -56,6 +56,21 @@ def test_windows_build_script_packages_application_icon():
     assert '--add-data "assets\\icon.ico;assets"' in script
 
 
+def test_windows_build_script_updates_master_before_packaging():
+    """验证 Windows 打包前固定切换并拉取 master 分支。
+
+    入参: build_windows.bat
+    出参: 脚本在安装依赖和打包前执行 git checkout master 与 git pull --ff-only origin master
+    """
+    script = Path("build_windows.bat").read_text(encoding="utf-8")
+
+    checkout_index = script.index("git checkout master")
+    pull_index = script.index("git pull --ff-only origin master")
+    install_index = script.index('%PYTHON_CMD% -m pip install -e ".[dev]"')
+
+    assert checkout_index < pull_index < install_index
+
+
 def test_application_icon_contains_windows_shell_sizes():
     """验证 exe 图标包含资源管理器常用尺寸。
 
