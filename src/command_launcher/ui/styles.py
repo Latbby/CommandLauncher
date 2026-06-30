@@ -226,3 +226,231 @@ QStatusBar#statusBar {
   font-size: 12px;
 }
 """
+
+DARK_STYLESHEET = """
+QMainWindow,
+QDialog {
+  background: #15161a;
+}
+
+/* ── 面板：深色模式下保持低对比容器层级 ── */
+QFrame#sidebarPanel,
+QFrame#contentPanel {
+  background: #202127;
+  border: none;
+  border-radius: 10px;
+}
+
+QSplitter#mainSplitter::handle {
+  background: transparent;
+}
+
+QLabel {
+  color: #f3f4f8;
+}
+
+QLabel#sectionTitle {
+  color: #a5a7b3;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+QLabel#projectTitle {
+  color: #f3f4f8;
+  font-size: 22px;
+  font-weight: 700;
+  font-family: "Segoe UI";
+}
+
+QLabel#projectPath {
+  color: #7c83ff;
+  font-size: 13px;
+  font-family: "Consolas", "Cascadia Code", "Courier New", monospace;
+}
+
+QListWidget {
+  background: #262832;
+  border: none;
+  border-radius: 8px;
+  outline: none;
+  padding: 4px;
+}
+
+QListWidget::item {
+  color: #f3f4f8;
+  min-height: 34px;
+  padding: 6px 10px;
+  margin: 1px 0px;
+  border-radius: 5px;
+}
+
+QListWidget::item:hover {
+  background: #30323e;
+}
+
+QListWidget::item:selected {
+  background: #343756;
+  color: #f3f4f8;
+}
+
+QTabWidget#commandTabs {
+  background: transparent;
+}
+
+QTabWidget#commandTabs::pane {
+  border: none;
+  padding: 0px;
+  margin: 0px;
+}
+
+QTabWidget#commandTabs QTabBar::tab {
+  background: transparent;
+  color: #a5a7b3;
+  border: none;
+  padding: 7px 12px;
+  margin-right: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+QTabWidget#commandTabs QTabBar::tab:selected {
+  color: #ffffff;
+  background: #343756;
+  border-radius: 5px;
+}
+
+QListWidget#commandList {
+  font-family: "Consolas", "Cascadia Code", "Courier New", monospace;
+  padding: 1px;
+}
+
+QListWidget#commandList::item {
+  padding: 0px;
+  border: none;
+  border-radius: 5px;
+  margin: 0px;
+}
+
+QListWidget#commandList::item:hover {
+  background: transparent;
+}
+
+QListWidget#commandList::item:selected,
+QListWidget#commandList::item:selected:active,
+QListWidget#commandList::item:selected:!active {
+  background: transparent;
+  color: #f3f4f8;
+}
+
+QLabel#commandName {
+  color: #f3f4f8;
+  font-size: 18px;
+}
+
+QPushButton#itemActionBtn {
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+QPushButton {
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+QPushButton[variant="primary"] {
+  background: #7c83ff;
+  color: #ffffff;
+  border: none;
+}
+
+QPushButton[variant="primary"]:hover {
+  background: #8f95ff;
+}
+
+QPushButton[variant="primary"]:pressed {
+  background: #6c72e8;
+}
+
+QPushButton[variant="secondary-fill"] {
+  background: #30334a;
+  color: #f3f4f8;
+  border: 1px solid #484c6b;
+}
+
+QPushButton[variant="secondary-fill"]:hover {
+  background: #393d58;
+  border-color: #5b6084;
+}
+
+QPushButton[variant="secondary"] {
+  background: transparent;
+  color: #f3f4f8;
+  border: 1px solid #3b3d49;
+}
+
+QPushButton[variant="secondary"]:hover {
+  background: #262832;
+  border-color: #565966;
+}
+
+QPushButton[variant="danger"] {
+  background: transparent;
+  color: #ff8585;
+  border: 1px solid #604040;
+}
+
+QPushButton[variant="danger"]:hover {
+  background: #3a2428;
+  border-color: #855258;
+}
+
+QPushButton:disabled {
+  background: #24262e;
+  color: #6d707c;
+  border: none;
+}
+
+QLineEdit {
+  background: #262832;
+  border: 1px solid #3b3d49;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #f3f4f8;
+}
+
+QLineEdit:focus {
+  border-color: #7c83ff;
+}
+
+QSlider#themeSwitch {
+  min-height: 20px;
+}
+
+QSlider#themeSwitch::groove:horizontal {
+  background: #262832;
+  border: 1px solid #3b3d49;
+  border-radius: 8px;
+  height: 16px;
+}
+
+QSlider#themeSwitch::handle:horizontal {
+  background: #7c83ff;
+  border: none;
+  border-radius: 7px;
+  width: 14px;
+  margin: 1px;
+}
+
+QStatusBar#statusBar {
+  background: #15161a;
+  color: #a5a7b3;
+  font-size: 12px;
+}
+"""

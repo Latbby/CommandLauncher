@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -24,17 +25,28 @@ class CommandDialog(QDialog):
             parent: Optional Qt parent widget.
         """
         super().__init__(parent)
-        self.setWindowTitle("命令")
+        self.setWindowTitle("编辑命令" if command else "添加命令")
+        self.setFixedWidth(460)
         self.name_input = QLineEdit(command.name if command else "")
         self.command_input = QLineEdit(command.command if command else "")
+        self.name_input.setPlaceholderText("例如：启动前端")
+        self.command_input.setPlaceholderText("例如：npm run dev")
+
+        # 命令内容通常包含脚本和参数，等宽字体更便于阅读。
+        command_font = QFont("Consolas")
+        command_font.setStyleHint(QFont.Monospace)
+        command_font.setFixedPitch(True)
+        self.command_input.setFont(command_font)
 
         form = QFormLayout()
         form.addRow("名称", self.name_input)
         form.addRow("命令", self.command_input)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        buttons.button(QDialogButtonBox.Ok).setText("确定")
+        buttons.button(QDialogButtonBox.Ok).setText("保存")
         buttons.button(QDialogButtonBox.Cancel).setText("取消")
+        buttons.button(QDialogButtonBox.Ok).setProperty("variant", "primary")
+        buttons.button(QDialogButtonBox.Cancel).setProperty("variant", "secondary")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
 

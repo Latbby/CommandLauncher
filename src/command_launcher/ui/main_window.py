@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import Qt, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QIcon
 from PySide6.QtWidgets import (
+    QApplication,
     QFileDialog,
     QFrame,
     QHBoxLayout,
@@ -16,6 +17,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QSlider,
     QSplitter,
     QTabWidget,
     QVBoxLayout,
@@ -27,6 +29,7 @@ from command_launcher.config_store import ConfigStore
 from command_launcher.models import AppConfig, LaunchCommand, Project
 from command_launcher.resources import app_icon_path
 from command_launcher.ui.dialogs import CommandDialog
+from command_launcher.ui.styles import DARK_STYLESHEET, LIGHT_STYLESHEET
 
 
 # ── 命令列表项控件：名称 + 悬浮编辑/删除 ──────────────────────────
@@ -163,9 +166,12 @@ class MainWindow(QMainWindow):
         self.project_command_list = QListWidget()
         self.command_tabs = QTabWidget()
         self.main_splitter = QSplitter()
+        self.github_button = QPushButton("GitHub")
+        self.theme_switch = QSlider(Qt.Horizontal)
 
         self._build_layout()
         self._connect_signals()
+        self._apply_theme(0)
         self._refresh_projects()
         self._select_initial_project()
 
@@ -250,6 +256,7 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(self.project_path)
         content_layout.addLayout(self._build_builtin_actions())
         content_layout.addWidget(self._build_command_area(), 1)
+        content_layout.addLayout(self._build_corner_tools())
         return content
 
     def _build_builtin_actions(self) -> QHBoxLayout:
@@ -314,6 +321,35 @@ class MainWindow(QMainWindow):
 
         return area
 
+    def _build_corner_tools(self) -> QHBoxLayout:
+        """构建右下角工具区。
+
+        Returns:
+            包含主题开关和 GitHub 按钮的横向布局。
+        """
+        tools = QHBoxLayout()
+        tools.setObjectName("cornerTools")
+        tools.setSpacing(8)
+        tools.addStretch(1)
+
+        # 主题开关左侧为浅色，右侧为深色，仅在当前运行期间生效。
+        self.theme_switch.setObjectName("themeSwitch")
+        self.theme_switch.setRange(0, 1)
+        self.theme_switch.setSingleStep(1)
+        self.theme_switch.setPageStep(1)
+        self.theme_switch.setFixedWidth(46)
+        self.theme_switch.setToolTip("切换浅色 / 深色模式")
+        self.theme_switch.valueChanged.connect(self._apply_theme)
+
+        self.github_button.setObjectName("githubButton")
+        self.github_button.setProperty("variant", "secondary")
+        self.github_button.setToolTip("打开 GitHub 仓库")
+        self.github_button.clicked.connect(self._open_github_repository)
+
+        tools.addWidget(self.theme_switch)
+        tools.addWidget(self.github_button)
+        return tools
+
     # ── 信号连接 ──────────────────────────────────────────────────
 
     def _connect_signals(self) -> None:
@@ -324,6 +360,31 @@ class MainWindow(QMainWindow):
         self.cmd_button.clicked.connect(lambda: self._run_builtin("cmd"))
         self.powershell_button.clicked.connect(lambda: self._run_builtin("powershell"))
         self.explorer_button.clicked.connect(lambda: self._run_builtin("explorer"))
+
+    def _open_github_repository(self) -> None:
+        """打开项目 GitHub 仓库。
+
+        Returns:
+            无返回值。
+        """
+        QDesktopServices.openUrl(
+            QUrl("https://github.com/Latbby/CommandLauncher.git")
+        )
+
+    def _apply_theme(self, value: int) -> None:
+        """根据主题开关值应用浅色或深色样式。
+
+        Args:
+            value: 0 表示浅色，1 表示深色。
+
+        Returns:
+            无返回值。
+        """
+        app = QApplication.instance()
+        if not app:
+            return
+        # 右侧位置代表深色模式，其他值回落到浅色模式。
+        app.setStyleSheet(DARK_STYLESHEET if value == 1 else LIGHT_STYLESHEET)
 
     # ── 项目列表 ──────────────────────────────────────────────────
 

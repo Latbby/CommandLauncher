@@ -54,27 +54,124 @@ def test_main_window_exposes_command_edit_actions(tmp_path, monkeypatch):
     app.processEvents()
 
 
-def test_command_dialog_uses_chinese_button_text(monkeypatch):
-    """验证命令对话框使用中文按钮文本。
+def test_command_dialog_uses_command_editor_polish(monkeypatch):
+    """验证命令对话框使用编辑器轻量美化。
 
-    入参: 创建 CommandDialog
-    出参: 确定/取消按钮文案正确
+    入参: 新增模式和编辑模式 CommandDialog
+    出参: 标题、宽度、占位文案、等宽字体、按钮文案和按钮变体正确
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
 
     from PySide6.QtWidgets import QApplication, QDialogButtonBox
 
+    from command_launcher.models import LaunchCommand
     from command_launcher.ui.dialogs import CommandDialog
 
     app = QApplication.instance() or QApplication([])
     dialog = CommandDialog()
+    edit_dialog = CommandDialog(LaunchCommand(name="启动服务", command="npm run dev"))
     buttons = dialog.findChild(QDialogButtonBox)
 
-    assert buttons.button(QDialogButtonBox.Ok).text() == "确定"
+    assert dialog.windowTitle() == "添加命令"
+    assert edit_dialog.windowTitle() == "编辑命令"
+    assert dialog.minimumWidth() == 460
+    assert dialog.name_input.placeholderText() == "例如：启动前端"
+    assert dialog.command_input.placeholderText() == "例如：npm run dev"
+    assert dialog.command_input.font().fixedPitch() is True
+    assert buttons.button(QDialogButtonBox.Ok).text() == "保存"
     assert buttons.button(QDialogButtonBox.Cancel).text() == "取消"
+    assert buttons.button(QDialogButtonBox.Ok).property("variant") == "primary"
+    assert buttons.button(QDialogButtonBox.Cancel).property("variant") == "secondary"
 
     dialog.close()
+    edit_dialog.close()
     app.processEvents()
+
+
+def test_main_window_corner_tools_open_github_repository(tmp_path, monkeypatch):
+    """验证右下角工具区 GitHub 按钮打开仓库地址。
+
+    入参: 点击 GitHub 按钮
+    出参: 调用系统浏览器打开项目仓库 URL
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtGui import QDesktopServices
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.config_store import ConfigStore
+    from command_launcher.ui.main_window import MainWindow
+
+    opened_urls: list[str] = []
+    monkeypatch.setattr(
+        QDesktopServices,
+        "openUrl",
+        lambda url: opened_urls.append(url.toString()) or True,
+    )
+
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow(store=ConfigStore(tmp_path / "config.json"))
+
+    assert window.github_button.text() == "GitHub"
+    assert window.github_button.toolTip() == "打开 GitHub 仓库"
+
+    window.github_button.click()
+
+    assert opened_urls == ["https://github.com/Latbby/CommandLauncher.git"]
+
+    window.close()
+    app.processEvents()
+
+
+def test_main_window_theme_switch_toggles_light_and_dark_styles(tmp_path, monkeypatch):
+    """验证主窗口主题开关可在浅色和深色间运行时切换。
+
+    入参: 拖动主题开关到深色再回到浅色
+    出参: 应用样式表分别切换为深色和浅色样式
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QApplication, QSlider
+
+    from command_launcher.config_store import ConfigStore
+    from command_launcher.ui.main_window import MainWindow
+    from command_launcher.ui.styles import DARK_STYLESHEET, LIGHT_STYLESHEET
+
+    app = QApplication.instance() or QApplication([])
+    app.setStyleSheet(LIGHT_STYLESHEET)
+    window = MainWindow(store=ConfigStore(tmp_path / "config.json"))
+
+    assert isinstance(window.theme_switch, QSlider)
+    assert window.theme_switch.orientation() == Qt.Horizontal
+    assert window.theme_switch.minimum() == 0
+    assert window.theme_switch.maximum() == 1
+    assert window.theme_switch.value() == 0
+
+    window.theme_switch.setValue(1)
+    assert app.styleSheet() == DARK_STYLESHEET
+
+    window.theme_switch.setValue(0)
+    assert app.styleSheet() == LIGHT_STYLESHEET
+
+    window.close()
+    app.processEvents()
+
+
+def test_dark_stylesheet_contains_expected_palette():
+    """验证深色样式包含约定的关键调色板。
+
+    入参: DARK_STYLESHEET
+    出参: 背景、面板、输入、主文字、次级文字和主色均存在
+    """
+    from command_launcher.ui.styles import DARK_STYLESHEET
+
+    assert "#15161a" in DARK_STYLESHEET
+    assert "#202127" in DARK_STYLESHEET
+    assert "#262832" in DARK_STYLESHEET
+    assert "#f3f4f8" in DARK_STYLESHEET
+    assert "#a5a7b3" in DARK_STYLESHEET
+    assert "#7c83ff" in DARK_STYLESHEET
 
 
 def test_main_window_uses_modern_layout_components(tmp_path, monkeypatch):
