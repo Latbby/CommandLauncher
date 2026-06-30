@@ -11,6 +11,21 @@ def test_ui_modules_import():
     assert MainWindow is not None
 
 
+def test_app_icon_path_points_to_packaged_icon_asset():
+    """验证应用图标路径解析到项目内的 ico 文件。
+
+    入参: 当前项目目录
+    出参: app_icon_path 返回存在的 assets/icon.ico
+    """
+    from command_launcher.resources import app_icon_path
+
+    icon_path = app_icon_path()
+
+    assert icon_path.name == "icon.ico"
+    assert icon_path.parent.name == "assets"
+    assert icon_path.exists()
+
+
 def test_main_window_exposes_command_edit_actions(tmp_path, monkeypatch):
     """验证主窗口暴露基础按钮和命令页签。
 

@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 from command_launcher.command_runner import CommandRunner
 from command_launcher.config_store import ConfigStore
 from command_launcher.models import AppConfig, LaunchCommand, Project
+from command_launcher.resources import app_icon_path
 from command_launcher.ui.dialogs import CommandDialog
 
 
@@ -142,9 +143,9 @@ class MainWindow(QMainWindow):
         self.config: AppConfig = self.store.load()
 
         self.setWindowTitle("命令启动器")
-        # 设置窗口图标 (src/command_launcher/ui/main_window.py → 项目根/assets/icon.ico)
-        icon_path = Path(__file__).parent.parent.parent.parent / "assets" / "icon.ico"
+        icon_path = app_icon_path()
         if icon_path.exists():
+            # 设置主窗口标题栏图标，Windows 左上角和任务栏会读取该图标。
             self.setWindowIcon(QIcon(str(icon_path)))
         self.resize(980, 620)
         self.project_list = QListWidget()

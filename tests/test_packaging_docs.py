@@ -18,6 +18,18 @@ def test_windows_build_script_packages_windowed_exe_from_repo_root():
     assert "dist\\CommandLauncher\\CommandLauncher.exe" in script
 
 
+def test_windows_build_script_packages_application_icon():
+    """验证打包脚本同时设置 exe 图标并携带运行时窗口图标。
+
+    入参: build_windows.bat
+    出参: PyInstaller 使用 assets/icon.ico 作为 exe 图标，并把图标文件复制进 dist
+    """
+    script = Path("build_windows.bat").read_text(encoding="utf-8")
+
+    assert "--icon assets\\icon.ico" in script
+    assert '--add-data "assets\\icon.ico;assets"' in script
+
+
 def test_windows_build_script_uses_project_virtual_environment():
     """验证一键打包脚本优先使用项目内虚拟环境。"""
     script = Path("build_windows.bat").read_text(encoding="utf-8")
