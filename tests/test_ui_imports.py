@@ -188,6 +188,41 @@ def test_command_list_hover_is_controlled_by_item_widget():
     assert "QListWidget#commandList::item:hover" not in LIGHT_STYLESHEET
 
 
+def test_command_item_hover_only_toggles_action_buttons(monkeypatch):
+    """验证命令项悬浮时只显示操作按钮，不渲染悬浮背景色。
+
+    入参: 命令项控件 + 鼠标进入/离开事件
+    出参: 操作按钮显示状态切换，控件背景色保持不变
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtCore import QPointF
+    from PySide6.QtGui import QEnterEvent, QPalette
+    from PySide6.QtWidgets import QApplication, QPushButton
+
+    from command_launcher.ui.main_window import _CommandItemWidget
+
+    app = QApplication.instance() or QApplication([])
+    item_widget = _CommandItemWidget("cmd-1", "构建项目")
+    action_buttons = item_widget.findChildren(QPushButton, "itemActionBtn")
+    initial_color = item_widget.palette().color(QPalette.Window)
+
+    item_widget.enterEvent(QEnterEvent(QPointF(), QPointF(), QPointF()))
+    hovered_color = item_widget.palette().color(QPalette.Window)
+
+    assert all(not button.isHidden() for button in action_buttons)
+    assert hovered_color == initial_color
+
+    item_widget.leaveEvent(None)
+    left_color = item_widget.palette().color(QPalette.Window)
+
+    assert all(button.isHidden() for button in action_buttons)
+    assert left_color == initial_color
+
+    item_widget.close()
+    app.processEvents()
+
+
 def test_double_click_global_command_runs_from_selected_project(tmp_path, monkeypatch):
     """验证命令通过 _CommandItemWidget 运行回调正确触发。
 
