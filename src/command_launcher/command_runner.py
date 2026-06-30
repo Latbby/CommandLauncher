@@ -9,6 +9,14 @@ from pathlib import Path
 class CommandRunner:
     """Build and launch external commands from a project directory."""
 
+    def _new_console_flags(self) -> int:
+        """Return Windows flags that force a new console window per launch.
+
+        Returns:
+            `CREATE_NEW_CONSOLE` on Windows, or 0 on platforms without that flag.
+        """
+        return getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
+
     def build_cmd(self, project_path: str) -> tuple[str, list[str]]:
         """Return executable and args for opening cmd in the project directory.
 
@@ -44,7 +52,7 @@ class CommandRunner:
         Returns:
             Executable name and argument list for subprocess.
         """
-        return "explorer.exe", [project_path]
+        return "explorer.exe", ["/n,", project_path]
 
     def run_cmd(self, project_path: str) -> subprocess.Popen:
         """Open cmd in the project directory and return the process handle.
@@ -56,7 +64,10 @@ class CommandRunner:
             Process handle returned by subprocess.
         """
         executable, args = self.build_cmd(project_path)
-        return subprocess.Popen([executable, *args])
+        return subprocess.Popen(
+            [executable, *args],
+            creationflags=self._new_console_flags(),
+        )
 
     def run_powershell(self, project_path: str) -> subprocess.Popen:
         """Open PowerShell in the project directory and return the process handle.
@@ -68,7 +79,10 @@ class CommandRunner:
             Process handle returned by subprocess.
         """
         executable, args = self.build_powershell(project_path)
-        return subprocess.Popen([executable, *args])
+        return subprocess.Popen(
+            [executable, *args],
+            creationflags=self._new_console_flags(),
+        )
 
     def run_explorer(self, project_path: str) -> subprocess.Popen:
         """Open File Explorer at the project directory and return the process handle.
@@ -99,4 +113,9 @@ class CommandRunner:
             raise ValueError("Command text cannot be empty")
 
         # Use shell=True so commands such as `code .` resolve like they do in cmd.
-        return subprocess.Popen(command, cwd=str(Path(project_path)), shell=True)
+        return subprocess.Popen(
+            command,
+            cwd=str(Path(project_path)),
+            shell=True,
+            creationflags=self._new_console_flags(),
+        )

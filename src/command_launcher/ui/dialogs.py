@@ -24,15 +24,17 @@ class CommandDialog(QDialog):
             parent: Optional Qt parent widget.
         """
         super().__init__(parent)
-        self.setWindowTitle("Command")
+        self.setWindowTitle("命令")
         self.name_input = QLineEdit(command.name if command else "")
         self.command_input = QLineEdit(command.command if command else "")
 
         form = QFormLayout()
-        form.addRow("Name", self.name_input)
-        form.addRow("Command", self.command_input)
+        form.addRow("名称", self.name_input)
+        form.addRow("命令", self.command_input)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.button(QDialogButtonBox.Ok).setText("确定")
+        buttons.button(QDialogButtonBox.Cancel).setText("取消")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
 

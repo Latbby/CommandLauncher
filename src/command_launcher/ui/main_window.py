@@ -43,14 +43,14 @@ class MainWindow(QMainWindow):
         self.runner = runner or CommandRunner()
         self.config: AppConfig = self.store.load()
 
-        self.setWindowTitle("Project Launcher")
+        self.setWindowTitle("命令启动器")
         self.resize(980, 620)
         self.project_list = QListWidget()
-        self.project_name = QLabel("No project selected")
+        self.project_name = QLabel("未选择项目")
         self.project_path = QLabel("")
-        self.cmd_button = QPushButton("cmd")
-        self.powershell_button = QPushButton("PowerShell")
-        self.explorer_button = QPushButton("Explorer")
+        self.cmd_button = QPushButton("打开命令提示符")
+        self.powershell_button = QPushButton("打开 PowerShell")
+        self.explorer_button = QPushButton("打开资源管理器")
         self.global_commands = QListWidget()
         self.project_commands = QListWidget()
 
@@ -67,9 +67,9 @@ class MainWindow(QMainWindow):
 
         sidebar = QFrame()
         sidebar_layout = QVBoxLayout(sidebar)
-        self.add_project_button = QPushButton("Add Project")
-        self.remove_project_button = QPushButton("Remove Project")
-        sidebar_layout.addWidget(QLabel("Projects"))
+        self.add_project_button = QPushButton("添加项目")
+        self.remove_project_button = QPushButton("删除项目")
+        sidebar_layout.addWidget(QLabel("项目"))
         sidebar_layout.addWidget(self.project_list, 1)
         sidebar_layout.addWidget(self.add_project_button)
         sidebar_layout.addWidget(self.remove_project_button)
@@ -86,20 +86,20 @@ class MainWindow(QMainWindow):
         builtins.addWidget(self.explorer_button)
         content_layout.addLayout(builtins)
 
-        content_layout.addWidget(QLabel("Global Commands"))
+        content_layout.addWidget(QLabel("全局命令"))
         content_layout.addWidget(self.global_commands)
-        self.add_global_button = QPushButton("Add Global Command")
-        self.edit_global_button = QPushButton("Edit Global Command")
-        self.delete_global_button = QPushButton("Delete Global Command")
+        self.add_global_button = QPushButton("添加全局命令")
+        self.edit_global_button = QPushButton("编辑全局命令")
+        self.delete_global_button = QPushButton("删除全局命令")
         content_layout.addWidget(self.add_global_button)
         content_layout.addWidget(self.edit_global_button)
         content_layout.addWidget(self.delete_global_button)
 
-        content_layout.addWidget(QLabel("Project Commands"))
+        content_layout.addWidget(QLabel("项目命令"))
         content_layout.addWidget(self.project_commands)
-        self.add_project_command_button = QPushButton("Add Project Command")
-        self.edit_project_command_button = QPushButton("Edit Project Command")
-        self.delete_project_command_button = QPushButton("Delete Project Command")
+        self.add_project_command_button = QPushButton("添加项目命令")
+        self.edit_project_command_button = QPushButton("编辑项目命令")
+        self.delete_project_command_button = QPushButton("删除项目命令")
         content_layout.addWidget(self.add_project_command_button)
         content_layout.addWidget(self.edit_project_command_button)
         content_layout.addWidget(self.delete_project_command_button)
@@ -187,7 +187,7 @@ class MainWindow(QMainWindow):
             project: Project to render, or None for an empty selection.
         """
         enabled = bool(project and Path(project.path).exists())
-        self.project_name.setText(project.name if project else "No project selected")
+        self.project_name.setText(project.name if project else "未选择项目")
         self.project_path.setText(project.path if project else "")
         for button in (self.cmd_button, self.powershell_button, self.explorer_button):
             button.setEnabled(enabled)
@@ -207,7 +207,7 @@ class MainWindow(QMainWindow):
 
     def _add_project(self) -> None:
         """Prompt for a directory and save it as a project."""
-        directory = QFileDialog.getExistingDirectory(self, "Select Project Directory")
+        directory = QFileDialog.getExistingDirectory(self, "选择项目目录")
         if not directory:
             return
         project = self.config.add_project(directory)
@@ -248,7 +248,7 @@ class MainWindow(QMainWindow):
 
         name, command_text = dialog.command_values()
         if not LaunchCommand.is_valid(name, command_text):
-            QMessageBox.warning(self, "Invalid Command", "Name and command are required.")
+            QMessageBox.warning(self, "命令无效", "名称和命令不能为空。")
             return
 
         command = LaunchCommand(name=name, command=command_text)
@@ -283,7 +283,7 @@ class MainWindow(QMainWindow):
 
         name, command_text = dialog.command_values()
         if not LaunchCommand.is_valid(name, command_text):
-            QMessageBox.warning(self, "Invalid Command", "Name and command are required.")
+            QMessageBox.warning(self, "命令无效", "名称和命令不能为空。")
             return
 
         command.name = name
@@ -331,7 +331,7 @@ class MainWindow(QMainWindow):
             else:
                 self.runner.run_explorer(project.path)
         except Exception as exc:
-            QMessageBox.critical(self, "Launch Failed", str(exc))
+            QMessageBox.critical(self, "启动失败", str(exc))
 
     def _run_command_item(self, item: QListWidgetItem, global_command: bool) -> None:
         """Run a selected custom command from the current project directory.
@@ -353,4 +353,4 @@ class MainWindow(QMainWindow):
         try:
             self.runner.run_custom(command.command, project.path)
         except Exception as exc:
-            QMessageBox.critical(self, "Launch Failed", f"{command.command}\n\n{exc}")
+            QMessageBox.critical(self, "启动失败", f"{command.command}\n\n{exc}")

@@ -19,6 +19,6 @@ def create_app(argv: list[str] | None = None) -> QApplication:
         Configured QApplication instance.
     """
     app = QApplication(argv or sys.argv)
-    app.setApplicationName("Project Launcher")
+    app.setApplicationName("命令启动器")
     app.setStyleSheet(LIGHT_STYLESHEET)
     return app

@@ -14,6 +14,15 @@ def test_build_cmd_command_uses_project_directory():
     assert args == ["/K", "cd", "/d", r"D:\work\command-launcher"]
 
 
+def test_build_explorer_command_requests_new_window():
+    runner = CommandRunner()
+
+    executable, args = runner.build_explorer(r"D:\work\command-launcher")
+
+    assert executable == "explorer.exe"
+    assert args == ["/n,", r"D:\work\command-launcher"]
+
+
 def test_build_powershell_command_uses_literal_path():
     runner = CommandRunner()
 
@@ -49,3 +58,22 @@ def test_run_custom_uses_shell_and_project_cwd(monkeypatch):
     assert calls[0][0] == ("code .",)
     assert calls[0][1]["cwd"] == r"D:\work\command-launcher"
     assert calls[0][1]["shell"] is True
+
+
+def test_run_cmd_requests_new_console_on_each_click(monkeypatch):
+    calls = []
+    monkeypatch.setattr(subprocess, "CREATE_NEW_CONSOLE", 16, raising=False)
+
+    def fake_popen(*args, **kwargs):
+        calls.append((args, kwargs))
+        return object()
+
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
+    runner = CommandRunner()
+
+    runner.run_cmd(r"D:\work\command-launcher")
+
+    assert calls[0][0] == (
+        ["cmd.exe", "/K", "cd", "/d", r"D:\work\command-launcher"],
+    )
+    assert calls[0][1]["creationflags"] == 16
