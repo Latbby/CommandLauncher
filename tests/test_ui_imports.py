@@ -123,16 +123,20 @@ def test_light_stylesheet_contains_modern_selectors():
     assert "border: none;" in LIGHT_STYLESHEET
     # 按钮变体
     assert 'QPushButton[variant="primary"]' in LIGHT_STYLESHEET
+    assert 'QPushButton[variant="secondary-fill"]' in LIGHT_STYLESHEET
     assert 'QPushButton[variant="secondary"]' in LIGHT_STYLESHEET
     assert 'QPushButton[variant="danger"]' in LIGHT_STYLESHEET
     # Tab 下划线指示器
     assert "QTabWidget::pane" in LIGHT_STYLESHEET
     assert "border-bottom: 2px solid transparent" in LIGHT_STYLESHEET
-    # 签名元素：等宽路径
+    # 签名元素：等宽路径 + 命令列表
     assert "QLabel#projectPath" in LIGHT_STYLESHEET
+    assert "QListWidget#commandList" in LIGHT_STYLESHEET
     assert "Consolas" in LIGHT_STYLESHEET
     # 新配色
     assert "#5b5fe3" in LIGHT_STYLESHEET
+    assert "#eeede8" in LIGHT_STYLESHEET
+    assert "#eef2ff" in LIGHT_STYLESHEET
     assert "#eeede8" in LIGHT_STYLESHEET
 
 

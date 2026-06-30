@@ -77,6 +77,28 @@ QListWidget::item:selected {
   color: #4a4ecf;
 }
 
+/* 命令列表 — 等宽字体 + 终端风格，增强可点击感 */
+QListWidget#commandList {
+  font-family: "Consolas", "Cascadia Code", "Courier New", monospace;
+}
+
+QListWidget#commandList::item {
+  color: #1c1c22;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  font-size: 13px;
+}
+
+QListWidget#commandList::item:hover {
+  background: #eef2ff;
+}
+
+QListWidget#commandList::item:selected {
+  background: #eceafe;
+  color: #4a4ecf;
+}
+
 /* ── 按钮 ── */
 QPushButton {
   border-radius: 6px;
@@ -98,6 +120,18 @@ QPushButton[variant="primary"]:hover {
 
 QPushButton[variant="primary"]:pressed {
   background: #3b3fb8;
+}
+
+/* 次级填充按钮：浅靛蓝底，介于主按钮和描边按钮之间 */
+QPushButton[variant="secondary-fill"] {
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+}
+
+QPushButton[variant="secondary-fill"]:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
 }
 
 /* 次级按钮：透明底，细线 */
@@ -130,11 +164,11 @@ QPushButton:disabled {
   border: none;
 }
 
-/* ── Tab：下划线指示器 ── */
+/* ── Tab：下划线指示器，底部浅分隔线 ── */
 QTabWidget::pane {
   border: none;
   background: transparent;
-  padding: 12px 0px 0px 0px;
+  padding: 10px 0px 0px 0px;
 }
 
 QTabBar::tab {
@@ -142,18 +176,20 @@ QTabBar::tab {
   color: #8b8896;
   border: none;
   border-bottom: 2px solid transparent;
-  padding: 8px 16px;
-  margin-right: 8px;
+  padding: 7px 14px;
+  margin-right: 6px;
   font-weight: 500;
+  font-size: 13px;
 }
 
 QTabBar::tab:selected {
   color: #4a4ecf;
-  border-bottom: 2px solid #5b5fe3;
+  border-bottom: 2px solid #8b85e8;
 }
 
 QTabBar::tab:hover:!selected {
   color: #4a4a55;
+  border-bottom-color: #d4d2cc;
 }
 
 /* ── 输入框 ── */

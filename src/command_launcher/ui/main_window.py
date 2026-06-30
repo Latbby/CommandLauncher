@@ -148,11 +148,15 @@ class MainWindow(QMainWindow):
     def _build_builtin_actions(self) -> QHBoxLayout:
         """构建内置启动操作按钮组。
 
+        CMD 为主操作，PowerShell 和资源管理器为次要操作，
+        通过按钮样式变体建立清晰的视觉层级。
+
         Returns:
             包含 CMD、PowerShell 和资源管理器按钮的横向布局。
         """
-        for button in (self.cmd_button, self.powershell_button, self.explorer_button):
-            button.setProperty("variant", "primary")
+        self.cmd_button.setProperty("variant", "primary")
+        self.powershell_button.setProperty("variant", "secondary-fill")
+        self.explorer_button.setProperty("variant", "secondary")
 
         actions = QHBoxLayout()
         actions.setSpacing(10)
@@ -323,14 +327,15 @@ class MainWindow(QMainWindow):
 
         self.global_commands.clear()
         for command in self.config.global_commands:
-            item = QListWidgetItem(command.name)
+            # ">" 前缀 — 与路径签名的终端风格一致，增强可点击感
+            item = QListWidgetItem(f"> {command.name}")
             item.setData(1, command.id)
             self.global_commands.addItem(item)
 
         self.project_commands.clear()
         if project:
             for command in project.commands:
-                item = QListWidgetItem(command.name)
+                item = QListWidgetItem(f"> {command.name}")
                 item.setData(1, command.id)
                 self.project_commands.addItem(item)
 
