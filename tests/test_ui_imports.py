@@ -189,6 +189,19 @@ def test_command_list_hover_is_controlled_by_item_widget():
     assert "background: transparent;" in LIGHT_STYLESHEET
 
 
+def test_command_list_disables_native_selection_background():
+    """验证命令列表禁用原生选中背景绘制。
+
+    入参: LIGHT_STYLESHEET
+    出参: commandList 显式覆盖通用 QListWidget::item:selected 为透明背景
+    """
+    from command_launcher.ui.styles import LIGHT_STYLESHEET
+
+    assert "QListWidget#commandList::item:selected" in LIGHT_STYLESHEET
+    assert "QListWidget#commandList::item:selected:active" in LIGHT_STYLESHEET
+    assert "QListWidget#commandList::item:selected:!active" in LIGHT_STYLESHEET
+
+
 def test_command_item_hover_only_toggles_action_buttons(monkeypatch):
     """验证命令项悬浮时只显示操作按钮，不渲染悬浮背景色。
 

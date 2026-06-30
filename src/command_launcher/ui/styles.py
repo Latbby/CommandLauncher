@@ -91,6 +91,13 @@ QListWidget#commandList::item:hover {
   background: transparent;
 }
 
+QListWidget#commandList::item:selected,
+QListWidget#commandList::item:selected:active,
+QListWidget#commandList::item:selected:!active {
+  background: transparent;
+  color: #1c1c22;
+}
+
 /* 命令名称 */
 QLabel#commandName {
   color: #1c1c22;
