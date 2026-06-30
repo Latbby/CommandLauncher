@@ -91,19 +91,6 @@ QListWidget#commandList::item:hover {
   background: #eef2ff;
 }
 
-/* ── 命令项内部标签 ── */
-
-/* 全局命令标记 */
-QLabel#globalTag {
-  color: #8b8896;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  padding: 2px 6px;
-  background: #f3f2ef;
-  border-radius: 3px;
-}
-
 /* 命令名称 */
 QLabel#commandName {
   color: #1c1c22;

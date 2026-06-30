@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QColor, QIcon, QPalette
 from PySide6.QtWidgets import (
     QFileDialog,
     QFrame,
@@ -63,22 +63,21 @@ class _CommandItemWidget(QWidget):
         self._command_id = command_id
         self._is_global = is_global
         self.setMouseTracking(True)
-        # 透明背景，让 QListWidgetItem 的 hover/selected 样式透出
-        self.setStyleSheet("background: transparent;")
+
+        # 用 palette 控制背景色（悬浮/非悬浮），不传给子控件
+        self.setAutoFillBackground(True)
+        self._set_bg(QColor("#f8f7f4"))  # 与列表底色相同，默认视觉透明
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 4, 8, 4)
         layout.setSpacing(8)
 
-        # 全局标签
-        if is_global:
-            tag = QLabel("[全局]")
-            tag.setObjectName("globalTag")
-            layout.addWidget(tag)
-
-        # 命令名称 — 终端风格 "> xxx"
+        # 命令名称 — 终端风格 "> xxx"，全局命令文字颜色偏淡
         self._name_label = QLabel(f"> {command_name}")
         self._name_label.setObjectName("commandName")
+        if is_global:
+            # 全局命令用弱化的文字颜色区分
+            self._name_label.setStyleSheet("color: #8b8896;")
         layout.addWidget(self._name_label, 1)
 
         # 编辑按钮 — 默认隐藏，悬浮时显示
@@ -100,18 +99,32 @@ class _CommandItemWidget(QWidget):
         layout.addWidget(self._edit_btn)
         layout.addWidget(self._delete_btn)
 
+    # ── 内部 ──────────────────────────────────────────────────────
+
+    def _set_bg(self, color: QColor) -> None:
+        """设置控件背景色，不影响子控件。
+
+        Args:
+            color: 目标背景颜色。
+        """
+        p = self.palette()
+        p.setColor(QPalette.Window, color)
+        self.setPalette(p)
+
     # ── 鼠标悬浮控制 ──────────────────────────────────────────────
 
     def enterEvent(self, event) -> None:
-        """鼠标进入时显示编辑和删除按钮。"""
+        """鼠标进入：显示操作按钮 + 浅靛蓝悬浮背景。"""
         self._edit_btn.show()
         self._delete_btn.show()
+        self._set_bg(QColor("#eef2ff"))
         super().enterEvent(event)
 
     def leaveEvent(self, event) -> None:
-        """鼠标离开时隐藏编辑和删除按钮。"""
+        """鼠标离开：隐藏操作按钮 + 恢复列表底色。"""
         self._edit_btn.hide()
         self._delete_btn.hide()
+        self._set_bg(QColor("#f8f7f4"))
         super().leaveEvent(event)
 
     def mouseDoubleClickEvent(self, event) -> None:
@@ -185,7 +198,7 @@ class MainWindow(QMainWindow):
         self.main_splitter.addWidget(content)
         self.main_splitter.setStretchFactor(0, 1)
         self.main_splitter.setStretchFactor(1, 3)
-        self.main_splitter.setSizes([260, 720])
+        self.main_splitter.setSizes([230, 750])
 
         root.addWidget(self.main_splitter)
 

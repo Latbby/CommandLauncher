@@ -144,7 +144,6 @@ def test_light_stylesheet_contains_modern_selectors():
     # 命令列表 + 列表内按钮
     assert "QListWidget#commandList" in LIGHT_STYLESHEET
     assert "QPushButton#itemActionBtn" in LIGHT_STYLESHEET
-    assert "QLabel#globalTag" in LIGHT_STYLESHEET
     # 签名元素：等宽路径
     assert "QLabel#projectPath" in LIGHT_STYLESHEET
     assert "Consolas" in LIGHT_STYLESHEET
