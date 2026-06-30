@@ -1,4 +1,30 @@
 from pathlib import Path
+import struct
+
+
+def _read_ico_entries(icon_path: Path) -> list[tuple[int, int, int]]:
+    """读取 ICO 文件目录项。
+
+    入参: icon_path 为待检查的 .ico 文件路径
+    出参: 每个图层的宽度、高度和位深元组
+    """
+    data = icon_path.read_bytes()
+    reserved, icon_type, image_count = struct.unpack_from("<HHH", data, 0)
+
+    assert reserved == 0
+    assert icon_type == 1
+
+    entries: list[tuple[int, int, int]] = []
+    for index in range(image_count):
+        # ICO 目录宽高字节使用 0 表示 256 像素。
+        width, height, _colors, _reserved, _planes, bit_count, _size, _offset = struct.unpack_from(
+            "<BBBBHHII",
+            data,
+            6 + index * 16,
+        )
+        entries.append((256 if width == 0 else width, 256 if height == 0 else height, bit_count))
+
+    return entries
 
 
 def test_readme_uses_windowed_pyinstaller_build():
@@ -28,6 +54,30 @@ def test_windows_build_script_packages_application_icon():
 
     assert "--icon assets\\icon.ico" in script
     assert '--add-data "assets\\icon.ico;assets"' in script
+
+
+def test_application_icon_contains_windows_shell_sizes():
+    """验证 exe 图标包含资源管理器常用尺寸。
+
+    入参: assets/icon.ico
+    出参: icon.ico 至少包含 16/32/48/256 像素的 32 位图层
+    """
+    entries = _read_ico_entries(Path("assets/icon.ico"))
+    sizes = {(width, height) for width, height, _bit_count in entries}
+
+    assert {(16, 16), (32, 32), (48, 48), (256, 256)}.issubset(sizes)
+    assert all(bit_count == 32 for _width, _height, bit_count in entries)
+
+
+def test_windows_build_script_cleans_pyinstaller_cache_for_icon_updates():
+    """验证打包时清理 PyInstaller 缓存以刷新 exe 图标资源。
+
+    入参: build_windows.bat
+    出参: PyInstaller 命令包含 --clean 参数
+    """
+    script = Path("build_windows.bat").read_text(encoding="utf-8")
+
+    assert "--clean" in script
 
 
 def test_windows_build_script_uses_project_virtual_environment():
