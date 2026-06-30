@@ -9,19 +9,36 @@ echo 命令启动器 Windows 打包
 echo ========================================
 echo.
 
-set "PYTHON_CMD=python"
-where python >nul 2>nul
-if errorlevel 1 (
-  where py >nul 2>nul
+set "VENV_PYTHON=.venv\Scripts\python.exe"
+set "BOOTSTRAP_PYTHON=python"
+
+if not exist "%VENV_PYTHON%" (
+  echo 未找到当前项目虚拟环境，正在创建 .venv...
+  where python >nul 2>nul
   if errorlevel 1 (
-    echo 未找到 Python。请先安装 Python，并勾选 Add Python to PATH。
+    where py >nul 2>nul
+    if errorlevel 1 (
+      echo 未找到 Python。请先安装 Python，并勾选 Add Python to PATH。
+      echo.
+      pause
+      popd
+      exit /b 1
+    )
+    set "BOOTSTRAP_PYTHON=py"
+  )
+
+  rem 使用系统 Python 只负责创建当前项目的虚拟环境。
+  %BOOTSTRAP_PYTHON% -m venv .venv
+  if errorlevel 1 (
+    echo 虚拟环境创建失败。
     echo.
     pause
     popd
     exit /b 1
   )
-  set "PYTHON_CMD=py"
 )
+
+set "PYTHON_CMD=%VENV_PYTHON%"
 
 echo [1/3] 使用 Python:
 %PYTHON_CMD% --version

@@ -16,3 +16,13 @@ def test_windows_build_script_packages_windowed_exe_from_repo_root():
     assert "--windowed --onedir --name CommandLauncher" in script
     assert "src\\command_launcher\\main.py" in script
     assert "dist\\CommandLauncher\\CommandLauncher.exe" in script
+
+
+def test_windows_build_script_uses_project_virtual_environment():
+    """验证一键打包脚本优先使用项目内虚拟环境。"""
+    script = Path("build_windows.bat").read_text(encoding="utf-8")
+
+    assert 'set "VENV_PYTHON=.venv\\Scripts\\python.exe"' in script
+    assert 'if not exist "%VENV_PYTHON%" (' in script
+    assert '%BOOTSTRAP_PYTHON% -m venv .venv' in script
+    assert 'set "PYTHON_CMD=%VENV_PYTHON%"' in script
