@@ -112,7 +112,8 @@ def test_main_window_corner_tools_open_github_repository(tmp_path, monkeypatch):
     app = QApplication.instance() or QApplication([])
     window = MainWindow(store=ConfigStore(tmp_path / "config.json"))
 
-    assert window.github_button.text() == "GitHub"
+    assert window.github_button.text() == ""
+    assert window.github_button.icon().isNull() is False
     assert window.github_button.toolTip() == "打开 GitHub 仓库"
 
     window.github_button.click()
@@ -172,6 +173,20 @@ def test_dark_stylesheet_contains_expected_palette():
     assert "#f3f4f8" in DARK_STYLESHEET
     assert "#a5a7b3" in DARK_STYLESHEET
     assert "#7c83ff" in DARK_STYLESHEET
+
+
+def test_light_stylesheet_styles_theme_switch():
+    """验证默认浅色主题下主题开关有可辨识的滑块样式。
+
+    入参: LIGHT_STYLESHEET
+    出参: 浅色主题包含 themeSwitch 轨道和手柄样式，并使用明确区分的轨道与手柄颜色
+    """
+    from command_launcher.ui.styles import LIGHT_STYLESHEET
+
+    assert "QSlider#themeSwitch::groove:horizontal" in LIGHT_STYLESHEET
+    assert "QSlider#themeSwitch::handle:horizontal" in LIGHT_STYLESHEET
+    assert "background: #eceafe;" in LIGHT_STYLESHEET
+    assert "background: #5b5fe3;" in LIGHT_STYLESHEET
 
 
 def test_main_window_uses_modern_layout_components(tmp_path, monkeypatch):

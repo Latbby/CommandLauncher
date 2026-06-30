@@ -219,6 +219,26 @@ QLineEdit:focus {
   border-color: #5b5fe3;
 }
 
+/* ── 主题开关：默认浅色下保持可见的轨道和滑块层级 ── */
+QSlider#themeSwitch {
+  min-height: 20px;
+}
+
+QSlider#themeSwitch::groove:horizontal {
+  background: #eceafe;
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  height: 16px;
+}
+
+QSlider#themeSwitch::handle:horizontal {
+  background: #5b5fe3;
+  border: none;
+  border-radius: 7px;
+  width: 14px;
+  margin: 1px;
+}
+
 /* ── 状态栏 ── */
 QStatusBar#statusBar {
   background: #eeede8;

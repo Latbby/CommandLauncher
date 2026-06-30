@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QUrl, Signal
-from PySide6.QtGui import QDesktopServices, QIcon
+from PySide6.QtCore import QPointF, Qt, QUrl, Signal
+from PySide6.QtGui import QColor, QDesktopServices, QIcon, QPainter, QPainterPath, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -30,6 +30,52 @@ from command_launcher.models import AppConfig, LaunchCommand, Project
 from command_launcher.resources import app_icon_path
 from command_launcher.ui.dialogs import CommandDialog
 from command_launcher.ui.styles import DARK_STYLESHEET, LIGHT_STYLESHEET
+
+
+def _github_mark_icon(dark_mode: bool = False) -> QIcon:
+    """绘制 GitHub 标识按钮图标。
+
+    Args:
+        dark_mode: True 时使用适合深色主题的浅色图标。
+
+    Returns:
+        可直接设置到按钮上的 GitHub 标识图标。
+    """
+    icon_color = QColor("#f3f4f8" if dark_mode else "#1c1c22")
+    pixmap = QPixmap(24, 24)
+    pixmap.fill(Qt.transparent)
+
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.Antialiasing)
+    painter.setPen(Qt.NoPen)
+    painter.setBrush(icon_color)
+
+    # 使用圆形头部、双耳和肩部轮廓组合出 GitHub 标识感，避免文字按钮占用空间。
+    mark = QPainterPath()
+    mark.addEllipse(4.2, 5.0, 15.6, 15.2)
+    mark.moveTo(6.5, 7.2)
+    mark.lineTo(7.2, 3.4)
+    mark.lineTo(10.4, 5.2)
+    mark.closeSubpath()
+    mark.moveTo(17.5, 7.2)
+    mark.lineTo(16.8, 3.4)
+    mark.lineTo(13.6, 5.2)
+    mark.closeSubpath()
+    painter.drawPath(mark)
+
+    shoulder = QPainterPath()
+    shoulder.moveTo(8.0, 19.0)
+    shoulder.cubicTo(9.3, 20.3, 14.7, 20.3, 16.0, 19.0)
+    shoulder.cubicTo(15.6, 21.1, 8.4, 21.1, 8.0, 19.0)
+    painter.drawPath(shoulder)
+
+    # 透明的眼部留白让小尺寸下也能看出图标不是普通圆点。
+    painter.setBrush(QColor("#ffffff" if not dark_mode else "#15161a"))
+    painter.drawEllipse(QPointF(9.2, 11.3), 1.0, 1.0)
+    painter.drawEllipse(QPointF(14.8, 11.3), 1.0, 1.0)
+
+    painter.end()
+    return QIcon(pixmap)
 
 
 # ── 命令列表项控件：名称 + 悬浮编辑/删除 ──────────────────────────
@@ -166,7 +212,7 @@ class MainWindow(QMainWindow):
         self.project_command_list = QListWidget()
         self.command_tabs = QTabWidget()
         self.main_splitter = QSplitter()
-        self.github_button = QPushButton("GitHub")
+        self.github_button = QPushButton("")
         self.theme_switch = QSlider(Qt.Horizontal)
 
         self._build_layout()
@@ -343,6 +389,8 @@ class MainWindow(QMainWindow):
 
         self.github_button.setObjectName("githubButton")
         self.github_button.setProperty("variant", "secondary")
+        self.github_button.setFixedSize(34, 30)
+        self.github_button.setIconSize(self.github_button.size() * 0.62)
         self.github_button.setToolTip("打开 GitHub 仓库")
         self.github_button.clicked.connect(self._open_github_repository)
 
@@ -385,6 +433,7 @@ class MainWindow(QMainWindow):
             return
         # 右侧位置代表深色模式，其他值回落到浅色模式。
         app.setStyleSheet(DARK_STYLESHEET if value == 1 else LIGHT_STYLESHEET)
+        self.github_button.setIcon(_github_mark_icon(dark_mode=value == 1))
 
     # ── 项目列表 ──────────────────────────────────────────────────
 
