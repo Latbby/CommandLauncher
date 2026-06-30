@@ -20,8 +20,8 @@ def test_main_window_exposes_command_edit_actions(tmp_path, monkeypatch):
     assert window.cmd_button.text() == "打开命令提示符"
     assert window.powershell_button.text() == "打开 PowerShell"
     assert window.explorer_button.text() == "打开资源管理器"
-    assert window.edit_global_button.text() == "编辑全局命令"
-    assert window.edit_project_command_button.text() == "编辑项目命令"
+    assert window.edit_global_button.text() == "编辑"
+    assert window.edit_project_command_button.text() == "编辑"
 
     window.close()
     app.processEvents()
