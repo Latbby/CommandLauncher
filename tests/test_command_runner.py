@@ -15,12 +15,17 @@ def test_build_cmd_command_uses_project_directory():
 
 
 def test_build_explorer_command_requests_new_window():
+    """验证资源管理器直接打开项目目录。
+
+    Returns:
+        None。
+    """
     runner = CommandRunner()
 
     executable, args = runner.build_explorer(r"D:\work\command-launcher")
 
     assert executable == "explorer.exe"
-    assert args == ["/n,", r"D:\work\command-launcher"]
+    assert args == [r"D:\work\command-launcher"]
 
 
 def test_build_powershell_command_uses_literal_path():
@@ -43,8 +48,14 @@ def test_run_custom_rejects_empty_command():
         runner.run_custom(" ", r"D:\work\command-launcher")
 
 
-def test_run_custom_uses_shell_and_project_cwd(monkeypatch):
+def test_run_custom_opens_visible_cmd_window_in_project_directory(monkeypatch):
+    """验证自定义命令在项目目录的新 cmd 窗口中保持可见。
+
+    Args:
+        monkeypatch: pytest 提供的替换依赖工具。
+    """
     calls = []
+    monkeypatch.setattr(subprocess, "CREATE_NEW_CONSOLE", 16, raising=False)
 
     def fake_popen(*args, **kwargs):
         calls.append((args, kwargs))
@@ -55,9 +66,9 @@ def test_run_custom_uses_shell_and_project_cwd(monkeypatch):
 
     runner.run_custom("code .", r"D:\work\command-launcher")
 
-    assert calls[0][0] == ("code .",)
+    assert calls[0][0] == (["cmd.exe", "/K", "code ."],)
     assert calls[0][1]["cwd"] == r"D:\work\command-launcher"
-    assert calls[0][1]["shell"] is True
+    assert calls[0][1]["creationflags"] == 16
 
 
 def test_run_cmd_requests_new_console_on_each_click(monkeypatch):

@@ -44,15 +44,15 @@ class CommandRunner:
         )
 
     def build_explorer(self, project_path: str) -> tuple[str, list[str]]:
-        """Return executable and args for opening File Explorer at the directory.
+        """构建打开项目目录的资源管理器命令。
 
         Args:
-            project_path: Directory that Explorer should display.
+            project_path: 资源管理器需要打开的项目目录。
 
         Returns:
-            Executable name and argument list for subprocess.
+            subprocess 使用的可执行文件名和参数列表。
         """
-        return "explorer.exe", ["/n,", project_path]
+        return "explorer.exe", [project_path]
 
     def run_cmd(self, project_path: str) -> subprocess.Popen:
         """Open cmd in the project directory and return the process handle.
@@ -97,25 +97,24 @@ class CommandRunner:
         return subprocess.Popen([executable, *args])
 
     def run_custom(self, command: str, project_path: str) -> subprocess.Popen:
-        """Launch a user command from the project directory.
+        """从项目目录启动用户自定义命令。
 
         Args:
-            command: User-entered command text.
-            project_path: Working directory for command execution.
+            command: 用户填写的命令文本。
+            project_path: 命令执行时使用的工作目录。
 
         Returns:
-            Process handle returned by subprocess.
+            subprocess 返回的进程句柄。
 
         Raises:
-            ValueError: If command text is empty.
+            ValueError: 命令文本为空时抛出。
         """
         if not command.strip():
             raise ValueError("Command text cannot be empty")
 
-        # Use shell=True so commands such as `code .` resolve like they do in cmd.
+        # 使用 cmd /K 保留命令窗口，避免短命令执行后立刻关闭导致用户误以为无响应。
         return subprocess.Popen(
-            command,
+            ["cmd.exe", "/K", command],
             cwd=str(Path(project_path)),
-            shell=True,
             creationflags=self._new_console_flags(),
         )

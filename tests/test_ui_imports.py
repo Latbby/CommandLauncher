@@ -123,3 +123,65 @@ def test_light_stylesheet_contains_modern_selectors():
     assert 'QPushButton[variant="secondary"]' in LIGHT_STYLESHEET
     assert 'QPushButton[variant="danger"]' in LIGHT_STYLESHEET
     assert "QTabWidget::pane" in LIGHT_STYLESHEET
+
+
+def test_double_click_global_command_runs_from_selected_project(tmp_path, monkeypatch):
+    """验证双击全局命令会从当前选中项目目录启动。
+
+    Args:
+        tmp_path: pytest 提供的临时目录。
+        monkeypatch: pytest 提供的环境变量修改工具。
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.config_store import ConfigStore
+    from command_launcher.models import AppConfig, LaunchCommand, Project
+    from command_launcher.ui.main_window import MainWindow
+
+    class FakeRunner:
+        """记录自定义命令调用参数的测试运行器。"""
+
+        def __init__(self) -> None:
+            """初始化调用记录。"""
+            self.custom_calls: list[tuple[str, str]] = []
+
+        def run_custom(self, command: str, project_path: str) -> object:
+            """记录自定义命令和项目目录。
+
+            Args:
+                command: 待执行命令。
+                project_path: 命令工作目录。
+
+            Returns:
+                测试占位对象。
+            """
+            self.custom_calls.append((command, project_path))
+            return object()
+
+    project_dir = tmp_path / "selected-project"
+    project_dir.mkdir()
+    project = Project(name="选中项目", path=str(project_dir))
+    command = LaunchCommand(name="打开编辑器", command="code .")
+    store = ConfigStore(tmp_path / "config.json")
+    store.save(
+        AppConfig(
+            projects=[project],
+            global_commands=[command],
+            last_selected_project_id=project.id,
+        )
+    )
+    runner = FakeRunner()
+
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow(store=store, runner=runner)
+    item = window.global_commands.item(0)
+
+    # 双击列表项时应调用运行器，而不是只选中列表项。
+    window.global_commands.itemDoubleClicked.emit(item)
+
+    assert runner.custom_calls == [("code .", str(project_dir))]
+
+    window.close()
+    app.processEvents()
