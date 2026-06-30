@@ -129,13 +129,14 @@ QListWidget#commandList::item:selected:!active {
 /* 命令名称 */
 QLabel#commandName {
   color: #1c1c22;
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 /* ── 列表内操作按钮（编辑/删除，悬浮时出现） ── */
 QPushButton#itemActionBtn {
   border-radius: 4px;
-  padding: 3px 8px;
+  padding: 2px 7px;
   font-size: 12px;
   font-weight: 500;
 }
@@ -377,12 +378,13 @@ QListWidget#commandList::item:selected:!active {
 
 QLabel#commandName {
   color: #f3f4f8;
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 QPushButton#itemActionBtn {
   border-radius: 4px;
-  padding: 3px 8px;
+  padding: 2px 7px;
   font-size: 12px;
   font-weight: 500;
 }

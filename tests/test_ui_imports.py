@@ -226,6 +226,18 @@ def test_dark_stylesheet_contains_expected_palette():
     assert "#7c83ff" in DARK_STYLESHEET
 
 
+def test_dark_stylesheet_uses_same_command_item_density():
+    """验证深色主题命令列表与浅色主题使用一致密度。
+
+    入参: DARK_STYLESHEET
+    出参: 深色命令名称字号和操作按钮内边距与浅色主题保持一致
+    """
+    from command_launcher.ui.styles import DARK_STYLESHEET
+
+    assert "QLabel#commandName {\n  color: #f3f4f8;\n  font-size: 16px;" in DARK_STYLESHEET
+    assert "padding: 2px 7px;" in DARK_STYLESHEET
+
+
 def test_light_stylesheet_styles_theme_switch():
     """验证默认浅色主题下主题开关有可辨识的滑块样式。
 
@@ -367,7 +379,7 @@ def test_command_list_uses_tight_item_spacing_and_larger_rows():
     """验证命令列表自身和列表项不再叠加大内边距。
 
     入参: LIGHT_STYLESHEET
-    出参: 命令列表内边距、命令项边距和命令文字尺寸符合紧凑放大后的设计
+    出参: 命令列表内边距、命令项边距和命令文字尺寸符合统一紧凑设计
     """
     from command_launcher.ui.styles import LIGHT_STYLESHEET
 
@@ -375,14 +387,14 @@ def test_command_list_uses_tight_item_spacing_and_larger_rows():
     assert "padding: 1px;" in LIGHT_STYLESHEET
     assert "QListWidget#commandList::item {\n  padding: 0px;" in LIGHT_STYLESHEET
     assert "margin: 0px;" in LIGHT_STYLESHEET
-    assert "QLabel#commandName {\n  color: #1c1c22;\n  font-size: 18px;" in LIGHT_STYLESHEET
+    assert "QLabel#commandName {\n  color: #1c1c22;\n  font-size: 16px;" in LIGHT_STYLESHEET
 
 
-def test_command_item_widget_uses_larger_tight_layout(monkeypatch):
-    """验证命令项控件减少左侧空白并增大行高。
+def test_command_item_widget_uses_unified_compact_layout(monkeypatch):
+    """验证命令项控件使用统一紧凑布局。
 
     入参: 命令项控件
-    出参: 行控件内边距更小，最小高度更大
+    出参: 行控件内边距和最小高度符合全局/项目命令统一样式
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
 
@@ -394,11 +406,11 @@ def test_command_item_widget_uses_larger_tight_layout(monkeypatch):
     item_widget = _CommandItemWidget("cmd-1", "构建项目")
     margins = item_widget.layout().contentsMargins()
 
-    assert margins.left() == 11
-    assert margins.top() == 8
-    assert margins.right() == 6
-    assert margins.bottom() == 8
-    assert item_widget.minimumHeight() == 50
+    assert margins.left() == 12
+    assert margins.top() == 6
+    assert margins.right() == 8
+    assert margins.bottom() == 6
+    assert item_widget.minimumHeight() == 42
 
     item_widget.close()
     app.processEvents()
@@ -423,7 +435,7 @@ def test_command_item_name_aligns_with_command_tab_text(monkeypatch):
 
     assert name_label.text() == "构建项目"
     assert "padding: 7px 12px;" in LIGHT_STYLESHEET
-    assert item_widget.layout().contentsMargins().left() + 1 == 12
+    assert item_widget.layout().contentsMargins().left() == 12
 
     item_widget.close()
     app.processEvents()
