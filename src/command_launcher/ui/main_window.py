@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QFileDialog,
     QFrame,
@@ -139,6 +140,10 @@ class MainWindow(QMainWindow):
         self.config: AppConfig = self.store.load()
 
         self.setWindowTitle("命令启动器")
+        # 设置窗口图标 (src/command_launcher/ui/main_window.py → 项目根/assets/icon.ico)
+        icon_path = Path(__file__).parent.parent.parent.parent / "assets" / "icon.ico"
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
         self.resize(980, 620)
         self.project_list = QListWidget()
         self.project_name = QLabel("未选择项目")
