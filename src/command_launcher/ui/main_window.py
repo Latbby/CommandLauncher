@@ -63,6 +63,8 @@ class _CommandItemWidget(QWidget):
         self._command_id = command_id
         self._is_global = is_global
         self.setMouseTracking(True)
+        # 透明背景，让 QListWidgetItem 的 hover/selected 样式透出
+        self.setStyleSheet("background: transparent;")
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(8, 5, 6, 5)
@@ -406,6 +408,8 @@ class MainWindow(QMainWindow):
             is_global: 是否为全局命令。
         """
         item_widget = _CommandItemWidget(command.id, command.name, is_global)
+        # 确保项不会被压缩，最小高度 36px
+        item_widget.setMinimumHeight(36)
 
         # 连接编辑/删除/运行信号
         item_widget.edit_requested.connect(
