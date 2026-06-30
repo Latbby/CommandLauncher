@@ -178,14 +178,15 @@ def test_main_window_uses_compact_panel_spacing(tmp_path, monkeypatch):
 
 
 def test_command_list_hover_is_controlled_by_item_widget():
-    """验证命令列表悬浮背景只由自定义列表项控件控制。
+    """验证命令列表禁用原生悬浮背景绘制。
 
     入参: LIGHT_STYLESHEET
-    出参: commandList 不再通过 QListWidget::item:hover 绘制悬浮底色
+    出参: commandList 显式覆盖通用 QListWidget::item:hover 为透明背景
     """
     from command_launcher.ui.styles import LIGHT_STYLESHEET
 
-    assert "QListWidget#commandList::item:hover" not in LIGHT_STYLESHEET
+    assert "QListWidget#commandList::item:hover" in LIGHT_STYLESHEET
+    assert "background: transparent;" in LIGHT_STYLESHEET
 
 
 def test_command_item_hover_only_toggles_action_buttons(monkeypatch):
