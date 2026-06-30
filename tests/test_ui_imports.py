@@ -185,6 +185,47 @@ def test_main_window_uses_compact_panel_spacing(tmp_path, monkeypatch):
     app.processEvents()
 
 
+def test_command_list_uses_tight_item_spacing_and_larger_rows():
+    """验证命令列表自身和列表项不再叠加大内边距。
+
+    入参: LIGHT_STYLESHEET
+    出参: 命令列表内边距、命令项边距和命令文字尺寸符合紧凑放大后的设计
+    """
+    from command_launcher.ui.styles import LIGHT_STYLESHEET
+
+    assert "QListWidget#commandList {\n  font-family" in LIGHT_STYLESHEET
+    assert "padding: 1px;" in LIGHT_STYLESHEET
+    assert "QListWidget#commandList::item {\n  padding: 0px;" in LIGHT_STYLESHEET
+    assert "margin: 0px;" in LIGHT_STYLESHEET
+    assert "QLabel#commandName {\n  color: #1c1c22;\n  font-size: 15px;" in LIGHT_STYLESHEET
+
+
+def test_command_item_widget_uses_larger_tight_layout(monkeypatch):
+    """验证命令项控件减少左侧空白并增大行高。
+
+    入参: 命令项控件
+    出参: 行控件内边距更小，最小高度更大
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.ui.main_window import _CommandItemWidget
+
+    app = QApplication.instance() or QApplication([])
+    item_widget = _CommandItemWidget("cmd-1", "构建项目")
+    margins = item_widget.layout().contentsMargins()
+
+    assert margins.left() == 4
+    assert margins.top() == 6
+    assert margins.right() == 6
+    assert margins.bottom() == 6
+    assert item_widget.minimumHeight() == 42
+
+    item_widget.close()
+    app.processEvents()
+
+
 def test_command_list_hover_is_controlled_by_item_widget():
     """验证命令列表禁用原生悬浮背景绘制。
 

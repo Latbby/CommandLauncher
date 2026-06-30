@@ -105,13 +105,14 @@ QTabWidget#commandTabs QTabBar::tab:selected {
 
 QListWidget#commandList {
   font-family: "Consolas", "Cascadia Code", "Courier New", monospace;
-  padding: 2px;
+  padding: 1px;
 }
 
 QListWidget#commandList::item {
+  padding: 0px;
   border: none;
   border-radius: 5px;
-  margin: 2px 0px;
+  margin: 0px;
 }
 
 QListWidget#commandList::item:hover {
@@ -128,7 +129,7 @@ QListWidget#commandList::item:selected:!active {
 /* 命令名称 */
 QLabel#commandName {
   color: #1c1c22;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 /* ── 列表内操作按钮（编辑/删除，悬浮时出现） ── */

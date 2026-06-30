@@ -64,8 +64,9 @@ class _CommandItemWidget(QWidget):
         self.setMouseTracking(True)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 4, 8, 4)
-        layout.setSpacing(8)
+        layout.setContentsMargins(4, 6, 6, 6)
+        layout.setSpacing(10)
+        self.setMinimumHeight(42)
 
         # 命令名称 — 终端风格 "> xxx"，全局命令文字颜色偏淡
         self._name_label = QLabel(f"> {command_name}")
@@ -403,8 +404,8 @@ class MainWindow(QMainWindow):
             is_global: 是否为全局命令。
         """
         item_widget = _CommandItemWidget(command.id, command.name, is_global)
-        # 确保项不会被压缩，最小高度 36px
-        item_widget.setMinimumHeight(36)
+        # 确保项不会被压缩，行高略放大以提升命令可读性。
+        item_widget.setMinimumHeight(42)
 
         # 连接编辑/删除/运行信号
         item_widget.edit_requested.connect(
