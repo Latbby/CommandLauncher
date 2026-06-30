@@ -64,12 +64,12 @@ class _CommandItemWidget(QWidget):
         self.setMouseTracking(True)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(4, 6, 6, 6)
+        layout.setContentsMargins(11, 6, 6, 6)
         layout.setSpacing(10)
         self.setMinimumHeight(42)
 
-        # 命令名称 — 终端风格 "> xxx"，全局命令文字颜色偏淡
-        self._name_label = QLabel(f"> {command_name}")
+        # 命令名称与上方页签文字左边缘对齐，全局命令文字颜色偏淡。
+        self._name_label = QLabel(command_name)
         self._name_label.setObjectName("commandName")
         if is_global:
             # 全局命令用弱化的文字颜色区分

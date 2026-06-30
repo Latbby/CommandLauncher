@@ -216,11 +216,36 @@ def test_command_item_widget_uses_larger_tight_layout(monkeypatch):
     item_widget = _CommandItemWidget("cmd-1", "构建项目")
     margins = item_widget.layout().contentsMargins()
 
-    assert margins.left() == 4
+    assert margins.left() == 11
     assert margins.top() == 6
     assert margins.right() == 6
     assert margins.bottom() == 6
     assert item_widget.minimumHeight() == 42
+
+    item_widget.close()
+    app.processEvents()
+
+
+def test_command_item_name_aligns_with_command_tab_text(monkeypatch):
+    """验证命令文字去掉前缀并与页签文字左边缘对齐。
+
+    入参: 命令项控件 + LIGHT_STYLESHEET
+    出参: 命令名称没有 > 前缀，命令行左边距与页签文字左边距一致
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication, QLabel
+
+    from command_launcher.ui.main_window import _CommandItemWidget
+    from command_launcher.ui.styles import LIGHT_STYLESHEET
+
+    app = QApplication.instance() or QApplication([])
+    item_widget = _CommandItemWidget("cmd-1", "构建项目")
+    name_label = item_widget.findChild(QLabel, "commandName")
+
+    assert name_label.text() == "构建项目"
+    assert "padding: 7px 12px;" in LIGHT_STYLESHEET
+    assert item_widget.layout().contentsMargins().left() + 1 == 12
 
     item_widget.close()
     app.processEvents()
