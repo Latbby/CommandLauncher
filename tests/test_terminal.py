@@ -375,3 +375,112 @@ def test_terminal_output_regular_char_emits_text(monkeypatch):
     tw._output.keyPressEvent(event)
 
     assert received == ["a"]
+
+
+def test_terminal_output_up_arrow_emits_escape_sequence(monkeypatch):
+    """上方向键转发 ANSI 上箭头序列。
+
+    入参: 上方向键
+    出参: input_received 信号发出 "\\x1b[A"
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+    _ensure_app()
+
+    from PySide6.QtGui import QKeyEvent
+
+    tw = TerminalWidget("/test", "cmd")
+    received: list[str] = []
+    tw._output.input_received.connect(lambda text: received.append(text))
+
+    event = QKeyEvent(QKeyEvent.KeyPress, Qt.Key_Up, Qt.NoModifier)
+    tw._output.keyPressEvent(event)
+
+    assert received == ["\x1b[A"]
+
+
+def test_terminal_output_down_arrow_emits_escape_sequence(monkeypatch):
+    """下方向键转发 ANSI 下箭头序列。
+
+    入参: 下方向键
+    出参: input_received 信号发出 "\\x1b[B"
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+    _ensure_app()
+
+    from PySide6.QtGui import QKeyEvent
+
+    tw = TerminalWidget("/test", "cmd")
+    received: list[str] = []
+    tw._output.input_received.connect(lambda text: received.append(text))
+
+    event = QKeyEvent(QKeyEvent.KeyPress, Qt.Key_Down, Qt.NoModifier)
+    tw._output.keyPressEvent(event)
+
+    assert received == ["\x1b[B"]
+
+
+def test_terminal_output_tab_emits_tab_character(monkeypatch):
+    """Tab 键转发 Tab 字符到 shell。
+
+    入参: Tab 按键
+    出参: input_received 信号发出 "\\t"
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+    _ensure_app()
+
+    from PySide6.QtGui import QKeyEvent
+
+    tw = TerminalWidget("/test", "cmd")
+    received: list[str] = []
+    tw._output.input_received.connect(lambda text: received.append(text))
+
+    event = QKeyEvent(QKeyEvent.KeyPress, Qt.Key_Tab, Qt.NoModifier, "\t")
+    tw._output.keyPressEvent(event)
+
+    assert received == ["\t"]
+
+
+def test_terminal_output_shift_tab_emits_reverse_tab(monkeypatch):
+    """Shift+Tab 转发反向 Tab 序列。
+
+    入参: Shift+Tab 按键
+    出参: input_received 信号发出 "\\x1b[Z"
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+    _ensure_app()
+
+    from PySide6.QtGui import QKeyEvent
+
+    tw = TerminalWidget("/test", "cmd")
+    received: list[str] = []
+    tw._output.input_received.connect(lambda text: received.append(text))
+
+    event = QKeyEvent(
+        QKeyEvent.KeyPress, Qt.Key_Tab, Qt.ShiftModifier, "\t"
+    )
+    tw._output.keyPressEvent(event)
+
+    assert received == ["\x1b[Z"]
+
+
+def test_terminal_output_ctrl_l_emits_form_feed(monkeypatch):
+    """Ctrl+L 转发清屏控制字符。
+
+    入参: Ctrl+L 按键
+    出参: input_received 信号发出 "\\x0c"
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+    _ensure_app()
+
+    from PySide6.QtGui import QKeyEvent
+
+    tw = TerminalWidget("/test", "cmd")
+    received: list[str] = []
+    tw._output.input_received.connect(lambda text: received.append(text))
+
+    event = QKeyEvent(
+        QKeyEvent.KeyPress, Qt.Key_L, Qt.ControlModifier, "\x0c"
+    )
+    tw._output.keyPressEvent(event)
+
+    assert received == ["\x0c"]
