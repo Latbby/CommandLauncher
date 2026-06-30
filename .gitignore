@@ -6,3 +6,5 @@ dist/
 build/
 *.spec
 .superpowers/
+.idea/
+*.egg-info/

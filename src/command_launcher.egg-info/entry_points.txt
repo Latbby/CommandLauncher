@@ -1,2 +1,0 @@
-[console_scripts]
-command-launcher = command_launcher.main:main
