@@ -32,6 +32,7 @@ def test_readme_uses_windowed_pyinstaller_build():
 
     assert "CommandLauncher.spec" in readme
     assert "python -m PyInstaller --clean --noconfirm CommandLauncher.spec" in readme
+    assert "单文件" in readme
 
 
 def test_windows_build_script_packages_windowed_exe_from_repo_root():
@@ -40,7 +41,8 @@ def test_windows_build_script_packages_windowed_exe_from_repo_root():
     assert "chcp 65001" in script
     assert 'pushd "%~dp0"' in script
     assert "CommandLauncher.spec" in script
-    assert "dist\\CommandLauncher\\CommandLauncher.exe" in script
+    assert "dist\\CommandLauncher.exe" in script
+    assert "dist\\CommandLauncher\\CommandLauncher.exe" not in script
 
 
 def test_windows_build_script_packages_application_icon():
@@ -64,6 +66,20 @@ def test_pyinstaller_spec_embeds_exe_and_runtime_icons():
 
     assert "('assets/icon.ico', 'assets')" in spec
     assert "icon=['assets/icon.ico']" in spec
+
+
+def test_pyinstaller_spec_builds_single_file_exe():
+    """验证 PyInstaller spec 使用单文件 exe 打包结构。
+
+    入参: CommandLauncher.spec
+    出参: EXE 直接包含二进制和数据文件，且不再使用 COLLECT 输出依赖目录
+    """
+    spec = Path("CommandLauncher.spec").read_text(encoding="utf-8")
+
+    assert "a.binaries" in spec
+    assert "a.datas" in spec
+    assert "exclude_binaries=False" in spec
+    assert "COLLECT(" not in spec
 
 
 def test_pyinstaller_spec_uses_portable_entry_path():

@@ -29,14 +29,14 @@ build_windows.bat
 脚本会自动安装依赖并生成：
 
 ```text
-dist\CommandLauncher\CommandLauncher.exe
+dist\CommandLauncher.exe
 ```
 
-构建 Windows 单目录包：
+构建 Windows 单文件 exe：
 
 ```bash
 python -m PyInstaller --clean --noconfirm CommandLauncher.spec
 ```
 
 `--clean` 用来清理 PyInstaller 旧缓存，避免 exe 继续沿用旧图标。
-`CommandLauncher.spec` 固定窗口模式、单目录包、exe 资源管理器图标和运行时窗口图标。
+`CommandLauncher.spec` 固定窗口模式、单文件打包、exe 资源管理器图标和运行时窗口图标。

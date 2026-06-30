@@ -71,7 +71,7 @@ if errorlevel 1 goto build_failed
 
 echo.
 echo 打包完成:
-echo dist\CommandLauncher\CommandLauncher.exe
+echo dist\CommandLauncher.exe
 echo.
 pause
 popd

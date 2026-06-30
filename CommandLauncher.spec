@@ -20,8 +20,10 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
+    a.binaries,
+    a.datas,
     [],
-    exclude_binaries=True,
+    exclude_binaries=False,
     name='CommandLauncher',
     debug=False,
     bootloader_ignore_signals=False,
@@ -35,13 +37,4 @@ exe = EXE(
     entitlements_file=None,
     # 将图标写入 exe 的 PE 资源，供 Windows 资源管理器读取。
     icon=['assets/icon.ico'],
-)
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='CommandLauncher',
 )
