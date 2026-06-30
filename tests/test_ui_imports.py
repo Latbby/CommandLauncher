@@ -251,6 +251,68 @@ def test_command_item_name_aligns_with_command_tab_text(monkeypatch):
     app.processEvents()
 
 
+def test_command_item_colors_distinguish_global_and_project(monkeypatch):
+    """验证全局命令和项目命令使用文字颜色区分。
+
+    入参: 全局命令项控件 + 项目命令项控件
+    出参: 全局命令使用上方页签的弱化色，项目命令使用主文本色
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication, QLabel
+
+    from command_launcher.ui.main_window import _CommandItemWidget
+
+    app = QApplication.instance() or QApplication([])
+    global_item = _CommandItemWidget("global-1", "全局命令", is_global=True)
+    project_item = _CommandItemWidget("project-1", "项目命令", is_global=False)
+    global_label = global_item.findChild(QLabel, "commandName")
+    project_label = project_item.findChild(QLabel, "commandName")
+
+    assert "color: #8b8896;" in global_label.styleSheet()
+    assert project_label.styleSheet() == ""
+
+    global_item.close()
+    project_item.close()
+    app.processEvents()
+
+
+def test_command_item_single_click_requests_run(monkeypatch):
+    """验证单击命令项即可触发运行请求。
+
+    入参: 命令项控件 + 鼠标左键单击事件
+    出参: 发出 run_requested 信号并携带命令 ID
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtCore import QEvent, QPointF, Qt
+    from PySide6.QtGui import QMouseEvent
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.ui.main_window import _CommandItemWidget
+
+    app = QApplication.instance() or QApplication([])
+    item_widget = _CommandItemWidget("cmd-1", "构建项目")
+    run_requests: list[str] = []
+    item_widget.run_requested.connect(run_requests.append)
+
+    event = QMouseEvent(
+        QEvent.MouseButtonPress,
+        QPointF(2, 2),
+        QPointF(2, 2),
+        QPointF(2, 2),
+        Qt.LeftButton,
+        Qt.LeftButton,
+        Qt.NoModifier,
+    )
+    item_widget.mousePressEvent(event)
+
+    assert run_requests == ["cmd-1"]
+
+    item_widget.close()
+    app.processEvents()
+
+
 def test_command_items_store_ids_in_user_role_without_decoration(tmp_path, monkeypatch):
     """验证命令项 ID 使用 UserRole，避免 DecorationRole 触发左侧图标预留。
 
@@ -424,14 +486,16 @@ def test_command_item_hover_only_toggles_action_buttons(monkeypatch):
     app.processEvents()
 
 
-def test_double_click_global_command_runs_from_selected_project(tmp_path, monkeypatch):
-    """验证命令通过 _CommandItemWidget 运行回调正确触发。
+def test_click_global_command_runs_from_selected_project(tmp_path, monkeypatch):
+    """验证命令通过 _CommandItemWidget 单击运行回调正确触发。
 
     入参: 包含全局命令和项目的配置
     出参: 全局命令从项目目录启动
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
 
+    from PySide6.QtCore import QEvent, QPointF, Qt
+    from PySide6.QtGui import QMouseEvent
     from PySide6.QtWidgets import QApplication
 
     from command_launcher.config_store import ConfigStore
@@ -467,8 +531,16 @@ def test_double_click_global_command_runs_from_selected_project(tmp_path, monkey
 
     # 获取全局命令列表中的 _CommandItemWidget
     item_widget = window.global_command_list.itemWidget(window.global_command_list.item(0))
-    # 模拟双击运行
-    item_widget.run_requested.emit(command.id)
+    event = QMouseEvent(
+        QEvent.MouseButtonPress,
+        QPointF(2, 2),
+        QPointF(2, 2),
+        QPointF(2, 2),
+        Qt.LeftButton,
+        Qt.LeftButton,
+        Qt.NoModifier,
+    )
+    item_widget.mousePressEvent(event)
 
     assert runner.custom_calls == [("code .", str(project_dir))]
 

@@ -36,7 +36,7 @@ class _CommandItemWidget(QWidget):
     信号:
         edit_requested(str): 用户点击编辑按钮，携带命令 ID。
         delete_requested(str): 用户点击删除按钮，携带命令 ID。
-        run_requested(str): 用户双击项目名称区域，携带命令 ID。
+        run_requested(str): 用户单击项目名称区域，携带命令 ID。
     """
 
     edit_requested = Signal(str)
@@ -109,9 +109,14 @@ class _CommandItemWidget(QWidget):
         self._delete_btn.hide()
         super().leaveEvent(event)
 
+    def mousePressEvent(self, event) -> None:
+        """鼠标左键单击时发出运行请求。"""
+        if event.button() == Qt.LeftButton:
+            self.run_requested.emit(self._command_id)
+        super().mousePressEvent(event)
+
     def mouseDoubleClickEvent(self, event) -> None:
-        """双击时发出运行请求。"""
-        self.run_requested.emit(self._command_id)
+        """双击时不重复发出运行请求，避免命令执行两次。"""
         super().mouseDoubleClickEvent(event)
 
 
