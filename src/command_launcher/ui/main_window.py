@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFileDialog,
     QFrame,
@@ -12,10 +13,11 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMainWindow,
+    QMenu,
     QMessageBox,
     QPushButton,
     QSplitter,
-    QTabWidget,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -25,6 +27,97 @@ from command_launcher.config_store import ConfigStore
 from command_launcher.models import AppConfig, LaunchCommand, Project
 from command_launcher.ui.dialogs import CommandDialog
 
+
+# ── 命令列表项控件：名称 + 悬浮编辑/删除 ──────────────────────────
+
+class _CommandItemWidget(QWidget):
+    """命令列表项控件，鼠标悬浮时显示编辑和删除按钮。
+
+    信号:
+        edit_requested(str): 用户点击编辑按钮，携带命令 ID。
+        delete_requested(str): 用户点击删除按钮，携带命令 ID。
+        run_requested(str): 用户双击项目名称区域，携带命令 ID。
+    """
+
+    edit_requested = Signal(str)
+    delete_requested = Signal(str)
+    run_requested = Signal(str)
+
+    def __init__(
+        self,
+        command_id: str,
+        command_name: str,
+        is_global: bool = False,
+        parent: QWidget | None = None,
+    ) -> None:
+        """初始化命令列表项。
+
+        Args:
+            command_id: 命令唯一标识。
+            command_name: 命令显示名称。
+            is_global: 是否为全局命令。
+            parent: 可选的 Qt 父控件。
+        """
+        super().__init__(parent)
+        self._command_id = command_id
+        self._is_global = is_global
+        self.setMouseTracking(True)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(8, 5, 6, 5)
+        layout.setSpacing(6)
+
+        # 全局标签
+        if is_global:
+            tag = QLabel("[全局]")
+            tag.setObjectName("globalTag")
+            layout.addWidget(tag)
+
+        # 命令名称 — 终端风格 "> xxx"
+        self._name_label = QLabel(f"> {command_name}")
+        self._name_label.setObjectName("commandName")
+        layout.addWidget(self._name_label, 1)
+
+        # 编辑按钮 — 默认隐藏，悬浮时显示
+        self._edit_btn = QPushButton("编辑")
+        self._edit_btn.setObjectName("itemActionBtn")
+        self._edit_btn.setProperty("variant", "secondary")
+        self._edit_btn.setFixedHeight(24)
+        self._edit_btn.hide()
+        self._edit_btn.clicked.connect(lambda: self.edit_requested.emit(self._command_id))
+
+        # 删除按钮 — 默认隐藏，悬浮时显示
+        self._delete_btn = QPushButton("删除")
+        self._delete_btn.setObjectName("itemActionBtn")
+        self._delete_btn.setProperty("variant", "danger")
+        self._delete_btn.setFixedHeight(24)
+        self._delete_btn.hide()
+        self._delete_btn.clicked.connect(lambda: self.delete_requested.emit(self._command_id))
+
+        layout.addWidget(self._edit_btn)
+        layout.addWidget(self._delete_btn)
+
+    # ── 鼠标悬浮控制 ──────────────────────────────────────────────
+
+    def enterEvent(self, event) -> None:
+        """鼠标进入时显示编辑和删除按钮。"""
+        self._edit_btn.show()
+        self._delete_btn.show()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event) -> None:
+        """鼠标离开时隐藏编辑和删除按钮。"""
+        self._edit_btn.hide()
+        self._delete_btn.hide()
+        super().leaveEvent(event)
+
+    def mouseDoubleClickEvent(self, event) -> None:
+        """双击时发出运行请求。"""
+        self.run_requested.emit(self._command_id)
+        super().mouseDoubleClickEvent(event)
+
+
+# ── 主窗口 ────────────────────────────────────────────────────────
 
 class MainWindow(QMainWindow):
     """Main two-column project launcher window."""
@@ -50,7 +143,7 @@ class MainWindow(QMainWindow):
         self.project_list = QListWidget()
         self.project_name = QLabel("未选择项目")
         self.project_path = QLabel("")
-        # 项目路径使用等宽字体 — 签名元素，模拟终端路径提示符
+        # 项目路径使用等宽字体 — 签名元素
         path_font = self.project_path.font()
         path_font.setFamily("Consolas")
         path_font.setPointSize(10)
@@ -58,15 +151,15 @@ class MainWindow(QMainWindow):
         self.cmd_button = QPushButton("打开命令提示符")
         self.powershell_button = QPushButton("打开 PowerShell")
         self.explorer_button = QPushButton("打开资源管理器")
-        self.global_commands = QListWidget()
-        self.project_commands = QListWidget()
+        self.command_list = QListWidget()
         self.main_splitter = QSplitter()
-        self.command_tabs = QTabWidget()
 
         self._build_layout()
         self._connect_signals()
         self._refresh_projects()
         self._select_initial_project()
+
+    # ── 布局构建 ──────────────────────────────────────────────────
 
     def _build_layout(self) -> None:
         """构建左右分栏的现代化主界面布局。"""
@@ -142,14 +235,13 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(self.project_name)
         content_layout.addWidget(self.project_path)
         content_layout.addLayout(self._build_builtin_actions())
-        content_layout.addWidget(self._build_command_tabs(), 1)
+        content_layout.addWidget(self._build_command_area(), 1)
         return content
 
     def _build_builtin_actions(self) -> QHBoxLayout:
         """构建内置启动操作按钮组。
 
-        CMD 为主操作，PowerShell 和资源管理器为次要操作，
-        通过按钮样式变体建立清晰的视觉层级。
+        CMD 为主操作，PowerShell 和资源管理器为次要操作。
 
         Returns:
             包含 CMD、PowerShell 和资源管理器按钮的横向布局。
@@ -166,73 +258,52 @@ class MainWindow(QMainWindow):
         actions.addStretch(1)
         return actions
 
-    def _build_command_tabs(self) -> QTabWidget:
-        """构建全局命令和项目命令 Tab。
+    def _build_command_area(self) -> QWidget:
+        """构建统一命令区域：顶部标题栏 + 命令列表。
+
+        全局命令和项目命令合并在同一列表中展示。
 
         Returns:
-            包含两个命令列表页面的 Tab 控件。
+            包含标题栏和命令列表的控件。
         """
-        self.command_tabs.setObjectName("commandTabs")
-        self.add_global_button = QPushButton("添加")
-        self.edit_global_button = QPushButton("编辑")
-        self.delete_global_button = QPushButton("删除")
-        self.add_project_command_button = QPushButton("添加")
-        self.edit_project_command_button = QPushButton("编辑")
-        self.delete_project_command_button = QPushButton("删除")
-
-        global_tab = self._build_command_tab(
-            self.global_commands,
-            self.add_global_button,
-            self.edit_global_button,
-            self.delete_global_button,
-        )
-        project_tab = self._build_command_tab(
-            self.project_commands,
-            self.add_project_command_button,
-            self.edit_project_command_button,
-            self.delete_project_command_button,
-        )
-        self.command_tabs.addTab(global_tab, "全局命令")
-        self.command_tabs.addTab(project_tab, "项目命令")
-        return self.command_tabs
-
-    def _build_command_tab(
-        self,
-        command_list: QListWidget,
-        add_button: QPushButton,
-        edit_button: QPushButton,
-        delete_button: QPushButton,
-    ) -> QWidget:
-        """构建单个命令 Tab 页面。
-
-        Args:
-            command_list: 用于展示命令的列表控件。
-            add_button: 添加命令按钮。
-            edit_button: 编辑命令按钮。
-            delete_button: 删除命令按钮。
-
-        Returns:
-            包含命令列表和按钮组的 Tab 页面。
-        """
-        command_list.setObjectName("commandList")
-        add_button.setProperty("variant", "secondary")
-        edit_button.setProperty("variant", "secondary")
-        delete_button.setProperty("variant", "danger")
-
-        actions = QHBoxLayout()
-        actions.setSpacing(8)
-        actions.addWidget(add_button)
-        actions.addWidget(edit_button)
-        actions.addWidget(delete_button)
-        actions.addStretch(1)
-
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(0, 12, 0, 0)
+        area = QWidget()
+        layout = QVBoxLayout(area)
+        layout.setContentsMargins(0, 8, 0, 0)
         layout.setSpacing(10)
-        layout.addWidget(command_list, 1)
-        layout.addLayout(actions)
-        return tab
+
+        # ── 顶部栏：标题 + 添加按钮 ──
+        top_bar = QHBoxLayout()
+        top_bar.setSpacing(0)
+
+        title = QLabel("命令")
+        title.setObjectName("sectionTitle")
+        top_bar.addWidget(title)
+        top_bar.addStretch(1)
+
+        # 拆分按钮：主按钮添加项目命令，箭头菜单添加全局命令
+        self.add_command_button = QPushButton("添加")
+        self.add_command_button.setProperty("variant", "secondary")
+
+        add_menu = QMenu(self)
+        add_menu.addAction("添加全局命令", lambda: self._add_command(global_command=True))
+        self.add_command_button.setMenu(add_menu)
+        # 主按钮点击默认添加项目命令
+        self.add_command_button.clicked.connect(
+            lambda: self._add_command(global_command=False)
+        )
+
+        top_bar.addWidget(self.add_command_button)
+        layout.addLayout(top_bar)
+
+        # ── 命令列表 ──
+        self.command_list.setObjectName("commandList")
+        self.command_list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.command_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        layout.addWidget(self.command_list, 1)
+
+        return area
+
+    # ── 信号连接 ──────────────────────────────────────────────────
 
     def _connect_signals(self) -> None:
         """Connect UI events to application actions."""
@@ -242,28 +313,8 @@ class MainWindow(QMainWindow):
         self.cmd_button.clicked.connect(lambda: self._run_builtin("cmd"))
         self.powershell_button.clicked.connect(lambda: self._run_builtin("powershell"))
         self.explorer_button.clicked.connect(lambda: self._run_builtin("explorer"))
-        self.add_global_button.clicked.connect(lambda: self._add_command(global_command=True))
-        self.add_project_command_button.clicked.connect(
-            lambda: self._add_command(global_command=False)
-        )
-        self.edit_global_button.clicked.connect(
-            lambda: self._edit_command(global_command=True)
-        )
-        self.edit_project_command_button.clicked.connect(
-            lambda: self._edit_command(global_command=False)
-        )
-        self.delete_global_button.clicked.connect(
-            lambda: self._delete_command(global_command=True)
-        )
-        self.delete_project_command_button.clicked.connect(
-            lambda: self._delete_command(global_command=False)
-        )
-        self.global_commands.itemDoubleClicked.connect(
-            lambda item: self._run_command_item(item, True)
-        )
-        self.project_commands.itemDoubleClicked.connect(
-            lambda item: self._run_command_item(item, False)
-        )
+
+    # ── 项目列表 ──────────────────────────────────────────────────
 
     def _refresh_projects(self) -> None:
         """Render the saved project list."""
@@ -296,7 +347,7 @@ class MainWindow(QMainWindow):
         if not item:
             return None
         project_id = item.data(1)
-        return next((project for project in self.config.projects if project.id == project_id), None)
+        return next((p for p in self.config.projects if p.id == project_id), None)
 
     def _project_changed(self) -> None:
         """Persist and render the newly selected project."""
@@ -306,14 +357,13 @@ class MainWindow(QMainWindow):
         self._render_project(project)
 
     def _render_project(self, project: Project | None) -> None:
-        """渲染项目详情和命令列表。
+        """渲染项目详情和统一命令列表。
 
         Args:
             project: 需要渲染的项目，未选择时为 None。
         """
         enabled = bool(project and Path(project.path).exists())
         self.project_name.setText(project.name if project else "未选择项目")
-        # 终端路径提示符样式 — 签名元素
         path_text = f"▸ {project.path}" if project else ""
         self.project_path.setText(path_text)
         for button in (self.cmd_button, self.powershell_button, self.explorer_button):
@@ -325,19 +375,51 @@ class MainWindow(QMainWindow):
         else:
             self.statusBar().showMessage("项目路径不存在，启动操作已禁用。")
 
-        self.global_commands.clear()
-        for command in self.config.global_commands:
-            # ">" 前缀 — 与路径签名的终端风格一致，增强可点击感
-            item = QListWidgetItem(f"> {command.name}")
-            item.setData(1, command.id)
-            self.global_commands.addItem(item)
+        self._refresh_command_list()
 
-        self.project_commands.clear()
+    def _refresh_command_list(self) -> None:
+        """刷新统一命令列表：先展示全局命令，再展示项目命令。"""
+        self.command_list.clear()
+
+        # 全局命令 — 带 [全局] 标签
+        for command in self.config.global_commands:
+            self._add_command_item(command, is_global=True)
+
+        # 项目命令
+        project = self._selected_project()
         if project:
             for command in project.commands:
-                item = QListWidgetItem(f"> {command.name}")
-                item.setData(1, command.id)
-                self.project_commands.addItem(item)
+                self._add_command_item(command, is_global=False)
+
+    def _add_command_item(
+        self, command: LaunchCommand, is_global: bool
+    ) -> None:
+        """向命令列表追加一个命令项。
+
+        Args:
+            command: 命令数据模型。
+            is_global: 是否为全局命令。
+        """
+        item_widget = _CommandItemWidget(command.id, command.name, is_global)
+
+        # 连接编辑/删除/运行信号
+        item_widget.edit_requested.connect(
+            lambda cid: self._edit_command_by_id(cid, is_global)
+        )
+        item_widget.delete_requested.connect(
+            lambda cid: self._delete_command_by_id(cid, is_global)
+        )
+        item_widget.run_requested.connect(
+            lambda cid: self._run_command_by_id(cid, is_global)
+        )
+
+        list_item = QListWidgetItem()
+        list_item.setSizeHint(item_widget.sizeHint())
+        list_item.setData(1, command.id)
+        self.command_list.addItem(list_item)
+        self.command_list.setItemWidget(list_item, item_widget)
+
+    # ── 项目增删 ──────────────────────────────────────────────────
 
     def _add_project(self) -> None:
         """Prompt for a directory and save it as a project."""
@@ -348,7 +430,6 @@ class MainWindow(QMainWindow):
         self.store.save(self.config)
         self._refresh_projects()
 
-        # Re-select the new or existing project after refreshing the list.
         for index in range(self.project_list.count()):
             item = self.project_list.item(index)
             if item.data(1) == project.id:
@@ -360,17 +441,19 @@ class MainWindow(QMainWindow):
         project = self._selected_project()
         if not project:
             return
-        self.config.projects = [item for item in self.config.projects if item.id != project.id]
+        self.config.projects = [p for p in self.config.projects if p.id != project.id]
         self.config.last_selected_project_id = None
         self.store.save(self.config)
         self._refresh_projects()
         self._select_initial_project()
 
+    # ── 命令增删改 ────────────────────────────────────────────────
+
     def _add_command(self, global_command: bool) -> None:
-        """Create a global or project-specific custom command.
+        """创建全局或项目命令。
 
         Args:
-            global_command: True when adding to global commands.
+            global_command: True 时添加为全局命令。
         """
         project = self._selected_project()
         if not global_command and not project:
@@ -391,23 +474,21 @@ class MainWindow(QMainWindow):
         elif project:
             project.commands.append(command)
         self.store.save(self.config)
-        self._render_project(project)
+        self._refresh_command_list()
 
-    def _edit_command(self, global_command: bool) -> None:
-        """Edit the selected custom command.
+    def _edit_command_by_id(self, command_id: str, is_global: bool) -> None:
+        """根据命令 ID 编辑命令。
 
         Args:
-            global_command: True when editing a global command.
+            command_id: 要编辑的命令 ID。
+            is_global: 是否为全局命令。
         """
         project = self._selected_project()
-        command_list = self.global_commands if global_command else self.project_commands
-        item = command_list.currentItem()
-        if not item or (not global_command and not project):
-            return
-
-        commands = self.config.global_commands if global_command else project.commands
-        command_id = item.data(1)
-        command = next((entry for entry in commands if entry.id == command_id), None)
+        commands = (
+            self.config.global_commands if is_global
+            else (project.commands if project else [])
+        )
+        command = next((c for c in commands if c.id == command_id), None)
         if not command:
             return
 
@@ -423,35 +504,34 @@ class MainWindow(QMainWindow):
         command.name = name
         command.command = command_text
         self.store.save(self.config)
-        self._render_project(project)
+        self._refresh_command_list()
 
-    def _delete_command(self, global_command: bool) -> None:
-        """Delete the selected custom command.
+    def _delete_command_by_id(self, command_id: str, is_global: bool) -> None:
+        """根据命令 ID 删除命令。
 
         Args:
-            global_command: True when deleting from global commands.
+            command_id: 要删除的命令 ID。
+            is_global: 是否为全局命令。
         """
         project = self._selected_project()
-        command_list = self.global_commands if global_command else self.project_commands
-        item = command_list.currentItem()
-        if not item:
-            return
-
-        command_id = item.data(1)
-        if global_command:
+        if is_global:
             self.config.global_commands = [
-                command for command in self.config.global_commands if command.id != command_id
+                c for c in self.config.global_commands if c.id != command_id
             ]
         elif project:
-            project.commands = [command for command in project.commands if command.id != command_id]
+            project.commands = [
+                c for c in project.commands if c.id != command_id
+            ]
         self.store.save(self.config)
-        self._render_project(project)
+        self._refresh_command_list()
+
+    # ── 命令执行 ──────────────────────────────────────────────────
 
     def _run_builtin(self, command_type: str) -> None:
-        """Run one built-in command for the selected project.
+        """运行内置命令：CMD/PowerShell 弹窗，资源管理器打开目录。
 
         Args:
-            command_type: One of `cmd`, `powershell`, or `explorer`.
+            command_type: 命令类型，\"cmd\"、\"powershell\" 或 \"explorer\"。
         """
         project = self._selected_project()
         if not project:
@@ -467,20 +547,22 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             QMessageBox.critical(self, "启动失败", str(exc))
 
-    def _run_command_item(self, item: QListWidgetItem, global_command: bool) -> None:
-        """Run a selected custom command from the current project directory.
+    def _run_command_by_id(self, command_id: str, is_global: bool) -> None:
+        """根据命令 ID 执行自定义命令。
 
         Args:
-            item: Clicked list item containing the command id.
-            global_command: True when the item belongs to global commands.
+            command_id: 要执行的命令 ID。
+            is_global: 是否为全局命令。
         """
         project = self._selected_project()
         if not project:
             return
 
-        commands = self.config.global_commands if global_command else project.commands
-        command_id = item.data(1)
-        command = next((entry for entry in commands if entry.id == command_id), None)
+        commands = (
+            self.config.global_commands if is_global
+            else project.commands
+        )
+        command = next((c for c in commands if c.id == command_id), None)
         if not command:
             return
 

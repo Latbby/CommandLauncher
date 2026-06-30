@@ -19,7 +19,7 @@ QFrame#contentPanel {
 
 QSplitter#mainSplitter::handle {
   background: transparent;
-  width: 14px;
+  width: 20px;
 }
 
 /* ── 标签基础 ── */
@@ -77,26 +77,46 @@ QListWidget::item:selected {
   color: #4a4ecf;
 }
 
-/* 命令列表 — 等宽字体 + 终端风格，增强可点击感 */
+/* 命令列表 */
 QListWidget#commandList {
   font-family: "Consolas", "Cascadia Code", "Courier New", monospace;
 }
 
 QListWidget#commandList::item {
-  color: #1c1c22;
-  min-height: 34px;
-  padding: 6px 10px;
+  border: none;
   border-radius: 5px;
-  font-size: 13px;
+  margin: 2px 0px;
 }
 
 QListWidget#commandList::item:hover {
   background: #eef2ff;
 }
 
-QListWidget#commandList::item:selected {
-  background: #eceafe;
-  color: #4a4ecf;
+/* ── 命令项内部标签 ── */
+
+/* 全局命令标记 */
+QLabel#globalTag {
+  color: #8b8896;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  background: #f3f2ef;
+  border-radius: 3px;
+}
+
+/* 命令名称 */
+QLabel#commandName {
+  color: #1c1c22;
+  font-size: 13px;
+}
+
+/* ── 列表内操作按钮（编辑/删除，悬浮时出现） ── */
+QPushButton#itemActionBtn {
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 500;
 }
 
 /* ── 按钮 ── */
@@ -122,7 +142,7 @@ QPushButton[variant="primary"]:pressed {
   background: #3b3fb8;
 }
 
-/* 次级填充按钮：浅靛蓝底，介于主按钮和描边按钮之间 */
+/* 次级填充按钮：浅靛蓝底 */
 QPushButton[variant="secondary-fill"] {
   background: #eef2ff;
   color: #4338ca;
@@ -162,34 +182,6 @@ QPushButton:disabled {
   background: #f3f2ef;
   color: #c5c3be;
   border: none;
-}
-
-/* ── Tab：下划线指示器，底部浅分隔线 ── */
-QTabWidget::pane {
-  border: none;
-  background: transparent;
-  padding: 10px 0px 0px 0px;
-}
-
-QTabBar::tab {
-  background: transparent;
-  color: #8b8896;
-  border: none;
-  border-bottom: 2px solid transparent;
-  padding: 7px 14px;
-  margin-right: 6px;
-  font-weight: 500;
-  font-size: 13px;
-}
-
-QTabBar::tab:selected {
-  color: #4a4ecf;
-  border-bottom: 2px solid #8b85e8;
-}
-
-QTabBar::tab:hover:!selected {
-  color: #4a4a55;
-  border-bottom-color: #d4d2cc;
 }
 
 /* ── 输入框 ── */
