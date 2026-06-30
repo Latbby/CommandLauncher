@@ -93,7 +93,7 @@ QTabWidget#commandTabs QTabBar::tab {
   border: none;
   padding: 7px 12px;
   margin-right: 4px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -129,14 +129,14 @@ QListWidget#commandList::item:selected:!active {
 /* 命令名称 */
 QLabel#commandName {
   color: #1c1c22;
-  font-size: 15px;
+  font-size: 18px;
 }
 
 /* ── 列表内操作按钮（编辑/删除，悬浮时出现） ── */
 QPushButton#itemActionBtn {
   border-radius: 4px;
   padding: 3px 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
 }
 

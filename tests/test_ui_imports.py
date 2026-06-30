@@ -197,7 +197,7 @@ def test_command_list_uses_tight_item_spacing_and_larger_rows():
     assert "padding: 1px;" in LIGHT_STYLESHEET
     assert "QListWidget#commandList::item {\n  padding: 0px;" in LIGHT_STYLESHEET
     assert "margin: 0px;" in LIGHT_STYLESHEET
-    assert "QLabel#commandName {\n  color: #1c1c22;\n  font-size: 15px;" in LIGHT_STYLESHEET
+    assert "QLabel#commandName {\n  color: #1c1c22;\n  font-size: 18px;" in LIGHT_STYLESHEET
 
 
 def test_command_item_widget_uses_larger_tight_layout(monkeypatch):
@@ -217,10 +217,10 @@ def test_command_item_widget_uses_larger_tight_layout(monkeypatch):
     margins = item_widget.layout().contentsMargins()
 
     assert margins.left() == 11
-    assert margins.top() == 6
+    assert margins.top() == 8
     assert margins.right() == 6
-    assert margins.bottom() == 6
-    assert item_widget.minimumHeight() == 42
+    assert margins.bottom() == 8
+    assert item_widget.minimumHeight() == 50
 
     item_widget.close()
     app.processEvents()

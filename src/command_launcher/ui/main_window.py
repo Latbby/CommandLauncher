@@ -64,9 +64,9 @@ class _CommandItemWidget(QWidget):
         self.setMouseTracking(True)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(11, 6, 6, 6)
+        layout.setContentsMargins(11, 8, 6, 8)
         layout.setSpacing(10)
-        self.setMinimumHeight(42)
+        self.setMinimumHeight(50)
 
         # 命令名称与上方页签文字左边缘对齐，全局命令文字颜色偏淡。
         self._name_label = QLabel(command_name)
@@ -80,7 +80,7 @@ class _CommandItemWidget(QWidget):
         self._edit_btn = QPushButton("编辑")
         self._edit_btn.setObjectName("itemActionBtn")
         self._edit_btn.setProperty("variant", "secondary")
-        self._edit_btn.setFixedHeight(24)
+        self._edit_btn.setFixedHeight(28)
         self._edit_btn.hide()
         self._edit_btn.clicked.connect(lambda: self.edit_requested.emit(self._command_id))
 
@@ -410,7 +410,7 @@ class MainWindow(QMainWindow):
         """
         item_widget = _CommandItemWidget(command.id, command.name, is_global)
         # 确保项不会被压缩，行高略放大以提升命令可读性。
-        item_widget.setMinimumHeight(42)
+        item_widget.setMinimumHeight(50)
 
         # 连接编辑/删除/运行信号
         item_widget.edit_requested.connect(
