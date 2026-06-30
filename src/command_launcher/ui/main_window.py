@@ -14,11 +14,10 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMainWindow,
-    QMenu,
     QMessageBox,
     QPushButton,
     QSplitter,
-    QToolButton,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -153,7 +152,9 @@ class MainWindow(QMainWindow):
         self.cmd_button = QPushButton("打开命令提示符")
         self.powershell_button = QPushButton("打开 PowerShell")
         self.explorer_button = QPushButton("打开资源管理器")
-        self.command_list = QListWidget()
+        self.global_command_list = QListWidget()
+        self.project_command_list = QListWidget()
+        self.command_tabs = QTabWidget()
         self.main_splitter = QSplitter()
 
         self._build_layout()
@@ -188,6 +189,7 @@ class MainWindow(QMainWindow):
         container.setLayout(root)
         self.setCentralWidget(container)
         self.statusBar().setObjectName("statusBar")
+        self.statusBar().hide()
 
     def _build_sidebar(self) -> QFrame:
         """构建左侧项目列表面板。
@@ -229,8 +231,8 @@ class MainWindow(QMainWindow):
         content = QFrame()
         content.setObjectName("contentPanel")
         content_layout = QVBoxLayout(content)
-        # 左边距收紧，让命令列表更靠近内容面板边缘。
-        content_layout.setContentsMargins(8, 18, 18, 14)
+        # 底部不再保留状态栏提示，内容区底部边距与左侧保持一致。
+        content_layout.setContentsMargins(8, 18, 18, 8)
         content_layout.setSpacing(8)
 
         self.project_name.setObjectName("projectTitle")
@@ -264,12 +266,12 @@ class MainWindow(QMainWindow):
         return actions
 
     def _build_command_area(self) -> QWidget:
-        """构建统一命令区域：顶部标题栏 + 命令列表。
+        """构建命令区域：顶部标题栏 + 全局/项目命令页签。
 
-        全局命令和项目命令合并在同一列表中展示。
+        添加按钮根据当前页签决定添加全局命令或项目命令。
 
         Returns:
-            包含标题栏和命令列表的控件。
+            包含标题栏、添加按钮和命令页签的控件。
         """
         area = QWidget()
         layout = QVBoxLayout(area)
@@ -285,27 +287,23 @@ class MainWindow(QMainWindow):
         top_bar.addWidget(title)
         top_bar.addStretch(1)
 
-        # 拆分按钮：主按钮添加项目命令，箭头菜单添加全局命令
+        # 添加按钮根据当前页签添加全局命令或项目命令。
         self.add_command_button = QPushButton("添加")
         self.add_command_button.setProperty("variant", "secondary")
-
-        add_menu = QMenu(self)
-        add_menu.addAction("添加项目命令", lambda: self._add_command(global_command=False))
-        add_menu.addAction("添加全局命令", lambda: self._add_command(global_command=True))
-        self.add_command_button.setMenu(add_menu)
-        # 主按钮点击默认添加项目命令
-        self.add_command_button.clicked.connect(
-            lambda: self._add_command(global_command=False)
-        )
+        self.add_command_button.clicked.connect(self._add_command_for_current_tab)
 
         top_bar.addWidget(self.add_command_button)
         layout.addLayout(top_bar)
 
-        # ── 命令列表 ──
-        self.command_list.setObjectName("commandList")
-        self.command_list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.command_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        layout.addWidget(self.command_list, 1)
+        # ── 命令页签：列表贴近面板边框，只保留列表自身少量内边距 ──
+        self.command_tabs.setObjectName("commandTabs")
+        for command_list in (self.global_command_list, self.project_command_list):
+            command_list.setObjectName("commandList")
+            command_list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            command_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.command_tabs.addTab(self.global_command_list, "全局命令")
+        self.command_tabs.addTab(self.project_command_list, "项目命令")
+        layout.addWidget(self.command_tabs, 1)
 
         return area
 
@@ -374,35 +372,33 @@ class MainWindow(QMainWindow):
         self.project_path.setText(path_text)
         for button in (self.cmd_button, self.powershell_button, self.explorer_button):
             button.setEnabled(enabled)
-        if not project:
-            self.statusBar().showMessage("请选择或添加一个项目。")
-        elif enabled:
-            self.statusBar().showMessage("已选择项目。")
-        else:
-            self.statusBar().showMessage("项目路径不存在，启动操作已禁用。")
+        self.statusBar().clearMessage()
+        self.statusBar().hide()
 
         self._refresh_command_list()
 
     def _refresh_command_list(self) -> None:
-        """刷新统一命令列表：先展示全局命令，再展示项目命令。"""
-        self.command_list.clear()
+        """刷新全局命令列表和项目命令列表。"""
+        self.global_command_list.clear()
+        self.project_command_list.clear()
 
-        # 全局命令 — 带 [全局] 标签
+        # 全局命令固定展示在全局命令页签。
         for command in self.config.global_commands:
-            self._add_command_item(command, is_global=True)
+            self._add_command_item(self.global_command_list, command, is_global=True)
 
-        # 项目命令
+        # 项目命令只展示当前选中项目的命令。
         project = self._selected_project()
         if project:
             for command in project.commands:
-                self._add_command_item(command, is_global=False)
+                self._add_command_item(self.project_command_list, command, is_global=False)
 
     def _add_command_item(
-        self, command: LaunchCommand, is_global: bool
+        self, command_list: QListWidget, command: LaunchCommand, is_global: bool
     ) -> None:
-        """向命令列表追加一个命令项。
+        """向指定命令列表追加一个命令项。
 
         Args:
+            command_list: 目标命令列表控件。
             command: 命令数据模型。
             is_global: 是否为全局命令。
         """
@@ -424,8 +420,8 @@ class MainWindow(QMainWindow):
         list_item = QListWidgetItem()
         list_item.setSizeHint(item_widget.sizeHint())
         list_item.setData(1, command.id)
-        self.command_list.addItem(list_item)
-        self.command_list.setItemWidget(list_item, item_widget)
+        command_list.addItem(list_item)
+        command_list.setItemWidget(list_item, item_widget)
 
     # ── 项目增删 ──────────────────────────────────────────────────
 
@@ -456,6 +452,10 @@ class MainWindow(QMainWindow):
         self._select_initial_project()
 
     # ── 命令增删改 ────────────────────────────────────────────────
+
+    def _add_command_for_current_tab(self) -> None:
+        """根据当前命令页签创建全局命令或项目命令。"""
+        self._add_command(self.command_tabs.currentIndex() == 0)
 
     def _add_command(self, global_command: bool) -> None:
         """创建全局或项目命令。

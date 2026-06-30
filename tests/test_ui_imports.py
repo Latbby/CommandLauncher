@@ -12,7 +12,7 @@ def test_ui_modules_import():
 
 
 def test_main_window_exposes_command_edit_actions(tmp_path, monkeypatch):
-    """验证主窗口暴露基础按钮和统一命令列表。
+    """验证主窗口暴露基础按钮和命令页签。
 
     入参: 空配置 + 临时目录
     出参: 按钮文案正确，添加按钮存在
@@ -31,6 +31,9 @@ def test_main_window_exposes_command_edit_actions(tmp_path, monkeypatch):
     assert window.powershell_button.text() == "打开 PowerShell"
     assert window.explorer_button.text() == "打开资源管理器"
     assert window.add_command_button.text() == "添加"
+    assert window.add_command_button.menu() is None
+    assert window.command_tabs.tabText(0) == "全局命令"
+    assert window.command_tabs.tabText(1) == "项目命令"
 
     window.close()
     app.processEvents()
@@ -60,14 +63,14 @@ def test_command_dialog_uses_chinese_button_text(monkeypatch):
 
 
 def test_main_window_uses_modern_layout_components(tmp_path, monkeypatch):
-    """验证主窗口使用统一命令列表（无 Tab 分页）。
+    """验证主窗口使用全局/项目命令页签。
 
     入参: 空配置 + 临时目录
-    出参: 只有统一 command_list，无旧版 command_tabs
+    出参: 命令页签和两个命令列表存在
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
 
-    from PySide6.QtWidgets import QApplication, QListWidget, QSplitter
+    from PySide6.QtWidgets import QApplication, QListWidget, QSplitter, QTabWidget
 
     from command_launcher.config_store import ConfigStore
     from command_launcher.ui.main_window import MainWindow
@@ -77,10 +80,10 @@ def test_main_window_uses_modern_layout_components(tmp_path, monkeypatch):
 
     # 主布局使用可拖动分栏
     assert isinstance(window.main_splitter, QSplitter)
-    # 统一命令列表
-    assert isinstance(window.command_list, QListWidget)
-    # 旧版 Tab 组件不应存在
-    assert not hasattr(window, "command_tabs")
+    # 命令使用全局/项目页签分别展示
+    assert isinstance(window.command_tabs, QTabWidget)
+    assert isinstance(window.global_command_list, QListWidget)
+    assert isinstance(window.project_command_list, QListWidget)
 
     # 样式对象名
     assert window.project_name.objectName() == "projectTitle"
@@ -93,10 +96,10 @@ def test_main_window_uses_modern_layout_components(tmp_path, monkeypatch):
 
 
 def test_main_window_status_bar_warns_when_project_path_missing(tmp_path, monkeypatch):
-    """验证项目路径不存在时状态栏显示轻量提示。
+    """验证项目路径不存在时禁用启动按钮且不显示底部状态栏。
 
     入参: 路径不存在的项目
-    出参: 启动按钮禁用，状态栏提示正确
+    出参: 启动按钮禁用，底部状态栏隐藏
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
 
@@ -118,7 +121,7 @@ def test_main_window_status_bar_warns_when_project_path_missing(tmp_path, monkey
     assert window.cmd_button.isEnabled() is False
     assert window.powershell_button.isEnabled() is False
     assert window.explorer_button.isEnabled() is False
-    assert window.statusBar().currentMessage() == "项目路径不存在，启动操作已禁用。"
+    assert window.statusBar().isHidden() is True
 
     window.close()
     app.processEvents()
@@ -141,7 +144,8 @@ def test_light_stylesheet_contains_modern_selectors():
     assert 'QPushButton[variant="secondary-fill"]' in LIGHT_STYLESHEET
     assert 'QPushButton[variant="secondary"]' in LIGHT_STYLESHEET
     assert 'QPushButton[variant="danger"]' in LIGHT_STYLESHEET
-    # 命令列表 + 列表内按钮
+    # 命令列表、页签 + 列表内按钮
+    assert "QTabWidget#commandTabs" in LIGHT_STYLESHEET
     assert "QListWidget#commandList" in LIGHT_STYLESHEET
     assert "QPushButton#itemActionBtn" in LIGHT_STYLESHEET
     # 签名元素：等宽路径
@@ -168,10 +172,14 @@ def test_main_window_uses_compact_panel_spacing(tmp_path, monkeypatch):
     app = QApplication.instance() or QApplication([])
     window = MainWindow(store=ConfigStore(tmp_path / "config.json"))
     content_panel = window.findChild(QFrame, "contentPanel")
-    left_margin = content_panel.layout().contentsMargins().left()
+    content_margins = content_panel.layout().contentsMargins()
+    command_margins = window.command_tabs.parentWidget().layout().contentsMargins()
 
     assert window.main_splitter.handleWidth() == 8
-    assert left_margin == 8
+    assert content_margins.left() == 8
+    assert content_margins.bottom() == 8
+    assert command_margins.left() == 0
+    assert command_margins.right() == 0
 
     window.close()
     app.processEvents()
@@ -200,6 +208,79 @@ def test_command_list_disables_native_selection_background():
     assert "QListWidget#commandList::item:selected" in LIGHT_STYLESHEET
     assert "QListWidget#commandList::item:selected:active" in LIGHT_STYLESHEET
     assert "QListWidget#commandList::item:selected:!active" in LIGHT_STYLESHEET
+
+
+def test_command_tabs_render_global_and_project_commands_separately(tmp_path, monkeypatch):
+    """验证全局命令和项目命令分别展示在对应页签。
+
+    入参: 包含一个全局命令和一个项目命令的配置
+    出参: 全局列表和项目列表各显示自己的命令
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.config_store import ConfigStore
+    from command_launcher.models import AppConfig, LaunchCommand, Project
+    from command_launcher.ui.main_window import MainWindow
+
+    project_dir = tmp_path / "selected-project"
+    project_dir.mkdir()
+    project = Project(
+        name="选中项目",
+        path=str(project_dir),
+        commands=[LaunchCommand(name="项目构建", command="npm run build")],
+    )
+    global_command = LaunchCommand(name="打开编辑器", command="code .")
+    store = ConfigStore(tmp_path / "config.json")
+    store.save(
+        AppConfig(
+            projects=[project],
+            global_commands=[global_command],
+            last_selected_project_id=project.id,
+        )
+    )
+
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow(store=store)
+
+    assert window.global_command_list.count() == 1
+    assert window.project_command_list.count() == 1
+    assert window.global_command_list.item(0).data(1) == global_command.id
+    assert window.project_command_list.item(0).data(1) == project.commands[0].id
+
+    window.close()
+    app.processEvents()
+
+
+def test_add_command_button_uses_current_command_tab(tmp_path, monkeypatch):
+    """验证添加按钮根据当前页签决定命令类型。
+
+    入参: 切换全局/项目页签并点击添加按钮
+    出参: 分别触发添加全局命令和添加项目命令
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.config_store import ConfigStore
+    from command_launcher.ui.main_window import MainWindow
+
+    calls: list[bool] = []
+
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow(store=ConfigStore(tmp_path / "config.json"))
+    window._add_command = calls.append
+
+    window.command_tabs.setCurrentIndex(0)
+    window.add_command_button.click()
+    window.command_tabs.setCurrentIndex(1)
+    window.add_command_button.click()
+
+    assert calls == [True, False]
+
+    window.close()
+    app.processEvents()
 
 
 def test_command_item_hover_only_toggles_action_buttons(monkeypatch):
@@ -278,8 +359,8 @@ def test_double_click_global_command_runs_from_selected_project(tmp_path, monkey
     app = QApplication.instance() or QApplication([])
     window = MainWindow(store=store, runner=runner)
 
-    # 获取命令列表中的 _CommandItemWidget
-    item_widget = window.command_list.itemWidget(window.command_list.item(0))
+    # 获取全局命令列表中的 _CommandItemWidget
+    item_widget = window.global_command_list.itemWidget(window.global_command_list.item(0))
     # 模拟双击运行
     item_widget.run_requested.emit(command.id)
 

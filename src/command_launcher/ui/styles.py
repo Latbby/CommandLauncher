@@ -77,8 +77,35 @@ QListWidget::item:selected {
 }
 
 /* 命令列表 */
+QTabWidget#commandTabs {
+  background: transparent;
+}
+
+QTabWidget#commandTabs::pane {
+  border: none;
+  padding: 0px;
+  margin: 0px;
+}
+
+QTabWidget#commandTabs QTabBar::tab {
+  background: transparent;
+  color: #8b8896;
+  border: none;
+  padding: 7px 12px;
+  margin-right: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+QTabWidget#commandTabs QTabBar::tab:selected {
+  color: #4a4ecf;
+  background: #eceafe;
+  border-radius: 5px;
+}
+
 QListWidget#commandList {
   font-family: "Consolas", "Cascadia Code", "Courier New", monospace;
+  padding: 2px;
 }
 
 QListWidget#commandList::item {
