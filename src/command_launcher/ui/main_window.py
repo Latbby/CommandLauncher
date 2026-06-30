@@ -50,6 +50,11 @@ class MainWindow(QMainWindow):
         self.project_list = QListWidget()
         self.project_name = QLabel("未选择项目")
         self.project_path = QLabel("")
+        # 项目路径使用等宽字体 — 签名元素，模拟终端路径提示符
+        path_font = self.project_path.font()
+        path_font.setFamily("Consolas")
+        path_font.setPointSize(10)
+        self.project_path.setFont(path_font)
         self.cmd_button = QPushButton("打开命令提示符")
         self.powershell_button = QPushButton("打开 PowerShell")
         self.explorer_button = QPushButton("打开资源管理器")
@@ -304,7 +309,9 @@ class MainWindow(QMainWindow):
         """
         enabled = bool(project and Path(project.path).exists())
         self.project_name.setText(project.name if project else "未选择项目")
-        self.project_path.setText(project.path if project else "")
+        # 终端路径提示符样式 — 签名元素
+        path_text = f"▸ {project.path}" if project else ""
+        self.project_path.setText(path_text)
         for button in (self.cmd_button, self.powershell_button, self.explorer_button):
             button.setEnabled(enabled)
         if not project:

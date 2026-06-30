@@ -128,7 +128,12 @@ def test_light_stylesheet_contains_modern_selectors():
     # Tab 下划线指示器
     assert "QTabWidget::pane" in LIGHT_STYLESHEET
     assert "border-bottom: 2px solid transparent" in LIGHT_STYLESHEET
-    assert "border-bottom: 2px solid #2563eb" in LIGHT_STYLESHEET
+    # 签名元素：等宽路径
+    assert "QLabel#projectPath" in LIGHT_STYLESHEET
+    assert "Consolas" in LIGHT_STYLESHEET
+    # 新配色
+    assert "#5b5fe3" in LIGHT_STYLESHEET
+    assert "#eeede8" in LIGHT_STYLESHEET
 
 
 def test_double_click_global_command_runs_from_selected_project(tmp_path, monkeypatch):
