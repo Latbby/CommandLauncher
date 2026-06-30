@@ -20,6 +20,18 @@ command-launcher
 
 ## 打包
 
+推荐在 Windows 中双击运行：
+
+```text
+build_windows.bat
+```
+
+脚本会自动安装依赖并生成：
+
+```text
+dist\CommandLauncher\CommandLauncher.exe
+```
+
 构建 Windows 单目录包：
 
 ```bash
