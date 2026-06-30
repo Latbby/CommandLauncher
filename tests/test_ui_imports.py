@@ -64,15 +64,10 @@ def test_main_window_uses_modern_layout_components(tmp_path, monkeypatch):
 
     # 主布局使用可拖动分栏，命令区域使用 Tab 降低纵向堆叠。
     assert isinstance(window.main_splitter, QSplitter)
-    assert isinstance(window.content_splitter, QSplitter)
     assert isinstance(window.command_tabs, QTabWidget)
     assert window.command_tabs.count() == 2
     assert window.command_tabs.tabText(0) == "全局命令"
     assert window.command_tabs.tabText(1) == "项目命令"
-
-    # 终端面板初始隐藏
-    assert window.terminal_panel is not None
-    assert window.terminal_panel.isHidden() is True
 
     # 样式对象名用于 QSS 精准命中，避免影响对话框内部控件。
     assert window.project_name.objectName() == "projectTitle"
@@ -134,11 +129,6 @@ def test_light_stylesheet_contains_modern_selectors():
     assert "QTabWidget::pane" in LIGHT_STYLESHEET
     assert "border-bottom: 2px solid transparent" in LIGHT_STYLESHEET
     assert "border-bottom: 2px solid #2563eb" in LIGHT_STYLESHEET
-    # 终端面板样式
-    assert "QFrame#terminalPanel" in LIGHT_STYLESHEET
-    assert "QTabWidget#terminalTabs" in LIGHT_STYLESHEET
-    assert "QPlainTextEdit#terminalOutput" in LIGHT_STYLESHEET
-    assert "QSplitter#contentSplitter" in LIGHT_STYLESHEET
 
 
 def test_double_click_global_command_runs_from_selected_project(tmp_path, monkeypatch):

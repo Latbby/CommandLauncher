@@ -13,21 +13,9 @@ QFrame#contentPanel {
   border-radius: 10px;
 }
 
-/* 终端面板容器 — 同样无边框风格 */
-QFrame#terminalPanel {
-  background: #ffffff;
-  border: none;
-  border-radius: 10px;
-}
-
 QSplitter#mainSplitter::handle {
   background: transparent;
   width: 12px;
-}
-
-QSplitter#contentSplitter::handle {
-  background: transparent;
-  height: 8px;
 }
 
 QLabel {
@@ -178,48 +166,4 @@ QStatusBar#statusBar {
   color: #6b7280;
 }
 
-/* ===== 终端区域 — 暗色主题 ===== */
-
-/* 终端 Tab 控件容器 */
-QTabWidget#terminalTabs::pane {
-  border: none;
-  background: #1e1e1e;
-  border-radius: 0px 0px 8px 8px;
-}
-
-QTabWidget#terminalTabs QTabBar::tab {
-  background: #2d2d2d;
-  color: #9ca3af;
-  border: none;
-  border-bottom: 2px solid transparent;
-  padding: 6px 14px;
-  margin-right: 2px;
-  border-top-left-radius: 6px;
-  border-top-right-radius: 6px;
-  font-size: 12px;
-  font-weight: 400;
-}
-
-QTabWidget#terminalTabs QTabBar::tab:selected {
-  color: #e5e7eb;
-  background: #1e1e1e;
-  border-bottom: 2px solid #2563eb;
-}
-
-QTabWidget#terminalTabs QTabBar::tab:hover:!selected {
-  color: #d1d5db;
-  background: #3a3a3a;
-}
-
-/* 终端输出区 */
-QPlainTextEdit#terminalOutput {
-  background: #1e1e1e;
-  color: #d4d4d4;
-  border: none;
-  border-radius: 6px;
-  selection-background: #264f78;
-  font-family: "Consolas", "Cascadia Code", "Courier New", monospace;
-  font-size: 13px;
-  padding: 8px;
-}
 """

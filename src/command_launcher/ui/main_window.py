@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFileDialog,
     QFrame,
@@ -25,7 +24,6 @@ from command_launcher.command_runner import CommandRunner
 from command_launcher.config_store import ConfigStore
 from command_launcher.models import AppConfig, LaunchCommand, Project
 from command_launcher.ui.dialogs import CommandDialog
-from command_launcher.ui.terminal_panel import TerminalPanel
 
 
 class MainWindow(QMainWindow):
@@ -58,11 +56,7 @@ class MainWindow(QMainWindow):
         self.global_commands = QListWidget()
         self.project_commands = QListWidget()
         self.main_splitter = QSplitter()
-        self.content_splitter = QSplitter()
         self.command_tabs = QTabWidget()
-        self.terminal_panel = TerminalPanel(
-            current_project_callback=self._selected_project,
-        )
 
         self._build_layout()
         self._connect_signals()
@@ -77,21 +71,11 @@ class MainWindow(QMainWindow):
 
         self.main_splitter.setObjectName("mainSplitter")
         self.main_splitter.setChildrenCollapsible(False)
-        self.content_splitter.setObjectName("contentSplitter")
-        self.content_splitter.setOrientation(Qt.Vertical)
-        self.content_splitter.setChildrenCollapsible(False)
 
         sidebar = self._build_sidebar()
         content = self._build_content_panel()
-
-        # 右侧纵向分栏：内容面板 + 终端面板
-        self.content_splitter.addWidget(content)
-        self.content_splitter.addWidget(self.terminal_panel)
-        self.content_splitter.setStretchFactor(0, 3)
-        self.content_splitter.setStretchFactor(1, 2)
-
         self.main_splitter.addWidget(sidebar)
-        self.main_splitter.addWidget(self.content_splitter)
+        self.main_splitter.addWidget(content)
         self.main_splitter.setStretchFactor(0, 1)
         self.main_splitter.setStretchFactor(1, 3)
         self.main_splitter.setSizes([260, 720])
@@ -241,15 +225,6 @@ class MainWindow(QMainWindow):
         layout.addLayout(actions)
         return tab
 
-    def closeEvent(self, event) -> None:
-        """关闭窗口前终止所有嵌入式终端进程。
-
-        Args:
-            event: Qt 关闭事件。
-        """
-        self.terminal_panel.close_all()
-        super().closeEvent(event)
-
     def _connect_signals(self) -> None:
         """Connect UI events to application actions."""
         self.add_project_button.clicked.connect(self._add_project)
@@ -373,8 +348,6 @@ class MainWindow(QMainWindow):
         project = self._selected_project()
         if not project:
             return
-        # 先关闭已删除项目的终端页签
-        self.terminal_panel.close_terminals_for_project(project.id)
         self.config.projects = [item for item in self.config.projects if item.id != project.id]
         self.config.last_selected_project_id = None
         self.store.save(self.config)
@@ -463,10 +436,10 @@ class MainWindow(QMainWindow):
         self._render_project(project)
 
     def _run_builtin(self, command_type: str) -> None:
-        """运行内置命令：CMD/PowerShell 使用嵌入式终端，资源管理器保持外部启动。
+        """Run one built-in command for the selected project.
 
         Args:
-            command_type: 命令类型，\"cmd\"、\"powershell\" 或 \"explorer\"。
+            command_type: One of `cmd`, `powershell`, or `explorer`.
         """
         project = self._selected_project()
         if not project:
@@ -474,13 +447,9 @@ class MainWindow(QMainWindow):
 
         try:
             if command_type == "cmd":
-                self.terminal_panel.open_or_focus(
-                    project.id, project.name, project.path, "cmd"
-                )
+                self.runner.run_cmd(project.path)
             elif command_type == "powershell":
-                self.terminal_panel.open_or_focus(
-                    project.id, project.name, project.path, "powershell"
-                )
+                self.runner.run_powershell(project.path)
             else:
                 self.runner.run_explorer(project.path)
         except Exception as exc:
