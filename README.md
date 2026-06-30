@@ -35,15 +35,8 @@ dist\CommandLauncher\CommandLauncher.exe
 构建 Windows 单目录包：
 
 ```bash
-python -m PyInstaller --clean --windowed --onedir --name CommandLauncher --icon assets/icon.ico --add-data "assets/icon.ico;assets" src/command_launcher/main.py --noconfirm
+python -m PyInstaller --clean --noconfirm CommandLauncher.spec
 ```
 
 `--clean` 用来清理 PyInstaller 旧缓存，避免 exe 继续沿用旧图标。
-`--windowed` 用来避免双击 exe 时出现额外命令行窗口。
-`--icon` 用来设置 exe 图标，`--add-data` 用来把窗口运行时图标复制进打包目录。
-
-需要单文件 exe 时使用：
-
-```bash
-python -m PyInstaller --clean --windowed --onefile --name CommandLauncher --icon assets/icon.ico --add-data "assets/icon.ico;assets" src/command_launcher/main.py --noconfirm
-```
+`CommandLauncher.spec` 固定窗口模式、单目录包、exe 资源管理器图标和运行时窗口图标。

@@ -6,6 +6,7 @@ dist/
 build/
 .build_tmp/
 *.spec
+!CommandLauncher.spec
 .superpowers/
 .idea/
 *.egg-info/

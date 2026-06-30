@@ -30,8 +30,8 @@ def _read_ico_entries(icon_path: Path) -> list[tuple[int, int, int]]:
 def test_readme_uses_windowed_pyinstaller_build():
     readme = Path("README.md").read_text(encoding="utf-8")
 
-    assert "--windowed" in readme
-    assert "--name CommandLauncher" in readme
+    assert "CommandLauncher.spec" in readme
+    assert "python -m PyInstaller --clean --noconfirm CommandLauncher.spec" in readme
 
 
 def test_windows_build_script_packages_windowed_exe_from_repo_root():
@@ -39,8 +39,7 @@ def test_windows_build_script_packages_windowed_exe_from_repo_root():
 
     assert "chcp 65001" in script
     assert 'pushd "%~dp0"' in script
-    assert "--windowed --onedir --name CommandLauncher" in script
-    assert "src\\command_launcher\\main.py" in script
+    assert "CommandLauncher.spec" in script
     assert "dist\\CommandLauncher\\CommandLauncher.exe" in script
 
 
@@ -48,12 +47,47 @@ def test_windows_build_script_packages_application_icon():
     """验证打包脚本同时设置 exe 图标并携带运行时窗口图标。
 
     入参: build_windows.bat
-    出参: PyInstaller 使用 assets/icon.ico 作为 exe 图标，并把图标文件复制进 dist
+    出参: PyInstaller 使用受控 spec，spec 负责 exe 图标和运行时窗口图标
     """
     script = Path("build_windows.bat").read_text(encoding="utf-8")
 
-    assert "--icon assets\\icon.ico" in script
-    assert '--add-data "assets\\icon.ico;assets"' in script
+    assert "%PYTHON_CMD% -m PyInstaller --clean --noconfirm CommandLauncher.spec" in script
+
+
+def test_pyinstaller_spec_embeds_exe_and_runtime_icons():
+    """验证 PyInstaller spec 同时写入 exe 图标和运行时窗口图标。
+
+    入参: CommandLauncher.spec
+    出参: EXE 配置包含 icon，Analysis 配置包含 assets/icon.ico 数据文件
+    """
+    spec = Path("CommandLauncher.spec").read_text(encoding="utf-8")
+
+    assert "('assets/icon.ico', 'assets')" in spec
+    assert "icon=['assets/icon.ico']" in spec
+
+
+def test_pyinstaller_spec_uses_portable_entry_path():
+    """验证 PyInstaller spec 使用跨平台入口路径。
+
+    入参: CommandLauncher.spec
+    出参: 入口脚本使用正斜杠路径，避免不同环境解析失败
+    """
+    spec = Path("CommandLauncher.spec").read_text(encoding="utf-8")
+
+    assert "src/command_launcher/main.py" in spec
+    assert "src\\command_launcher\\main.py" not in spec
+
+
+def test_command_launcher_spec_is_tracked_by_gitignore_rules():
+    """验证 CommandLauncher.spec 不会继续被通配规则忽略。
+
+    入参: .gitignore
+    出参: *.spec 仍默认忽略，但 CommandLauncher.spec 被显式放行
+    """
+    gitignore = Path(".gitignore").read_text(encoding="utf-8")
+
+    assert "*.spec" in gitignore
+    assert "!CommandLauncher.spec" in gitignore
 
 
 def test_windows_build_script_updates_master_before_packaging():

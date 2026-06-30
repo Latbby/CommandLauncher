@@ -66,7 +66,7 @@ echo [4/4] 打包 Windows exe...
 tasklist /FI "IMAGENAME eq CommandLauncher.exe" 2>nul | find /I "CommandLauncher.exe" >nul
 if not errorlevel 1 goto app_running
 
-%PYTHON_CMD% -m PyInstaller --clean --windowed --onedir --name CommandLauncher --icon assets\icon.ico --add-data "assets\icon.ico;assets" src\command_launcher\main.py --noconfirm
+%PYTHON_CMD% -m PyInstaller --clean --noconfirm CommandLauncher.spec
 if errorlevel 1 goto build_failed
 
 echo.

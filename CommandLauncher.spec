@@ -2,10 +2,11 @@
 
 
 a = Analysis(
-    ['src\\command_launcher\\main.py'],
+    ['src/command_launcher/main.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    # 将图标复制进打包目录，供 Qt 运行时窗口图标读取。
+    datas=[('assets/icon.ico', 'assets')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -32,6 +33,8 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    # 将图标写入 exe 的 PE 资源，供 Windows 资源管理器读取。
+    icon=['assets/icon.ico'],
 )
 coll = COLLECT(
     exe,
