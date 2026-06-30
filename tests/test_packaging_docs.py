@@ -23,6 +23,14 @@ def test_windows_build_script_uses_project_virtual_environment():
     script = Path("build_windows.bat").read_text(encoding="utf-8")
 
     assert 'set "VENV_PYTHON=.venv\\Scripts\\python.exe"' in script
-    assert 'if not exist "%VENV_PYTHON%" (' in script
+    assert 'if exist "%VENV_PYTHON%" goto use_venv' in script
     assert '%BOOTSTRAP_PYTHON% -m venv .venv' in script
     assert 'set "PYTHON_CMD=%VENV_PYTHON%"' in script
+
+
+def test_windows_build_script_uses_crlf_line_endings():
+    """验证批处理脚本使用 cmd 稳定识别的 CRLF 换行。"""
+    script_bytes = Path("build_windows.bat").read_bytes()
+
+    assert b"\r\n" in script_bytes
+    assert b"\n" not in script_bytes.replace(b"\r\n", b"")
