@@ -152,6 +152,42 @@ def test_light_stylesheet_contains_modern_selectors():
     assert "#eeede8" in LIGHT_STYLESHEET
 
 
+def test_main_window_uses_compact_panel_spacing(tmp_path, monkeypatch):
+    """验证左右分栏和命令区域使用紧凑间距。
+
+    入参: 空配置 + 临时目录
+    出参: 分栏拖拽柄更窄，右侧内容左边距更小
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication, QFrame
+
+    from command_launcher.config_store import ConfigStore
+    from command_launcher.ui.main_window import MainWindow
+
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow(store=ConfigStore(tmp_path / "config.json"))
+    content_panel = window.findChild(QFrame, "contentPanel")
+    left_margin = content_panel.layout().contentsMargins().left()
+
+    assert window.main_splitter.handleWidth() == 8
+    assert left_margin == 8
+
+    window.close()
+    app.processEvents()
+
+
+def test_command_list_hover_is_controlled_by_item_widget():
+    """验证命令列表悬浮背景只由自定义列表项控件控制。
+
+    入参: LIGHT_STYLESHEET
+    出参: commandList 不再通过 QListWidget::item:hover 绘制悬浮底色
+    """
+    from command_launcher.ui.styles import LIGHT_STYLESHEET
+
+    assert "QListWidget#commandList::item:hover" not in LIGHT_STYLESHEET
+
+
 def test_double_click_global_command_runs_from_selected_project(tmp_path, monkeypatch):
     """验证命令通过 _CommandItemWidget 运行回调正确触发。
 

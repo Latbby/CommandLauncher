@@ -87,10 +87,6 @@ QListWidget#commandList::item {
   margin: 2px 0px;
 }
 
-QListWidget#commandList::item:hover {
-  background: #eef2ff;
-}
-
 /* 命令名称 */
 QLabel#commandName {
   color: #1c1c22;

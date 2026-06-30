@@ -189,8 +189,8 @@ class MainWindow(QMainWindow):
 
         self.main_splitter.setObjectName("mainSplitter")
         self.main_splitter.setChildrenCollapsible(False)
-        # 面板之间的空隙用底色 #eeede8 填充
-        self.main_splitter.setHandleWidth(18)
+        # 分栏拖拽柄保持可用，同时减少左右面板之间的视觉空隙。
+        self.main_splitter.setHandleWidth(8)
 
         sidebar = self._build_sidebar()
         content = self._build_content_panel()
@@ -247,7 +247,8 @@ class MainWindow(QMainWindow):
         content = QFrame()
         content.setObjectName("contentPanel")
         content_layout = QVBoxLayout(content)
-        content_layout.setContentsMargins(18, 18, 18, 14)
+        # 左边距收紧，让命令列表更靠近内容面板边缘。
+        content_layout.setContentsMargins(8, 18, 18, 14)
         content_layout.setSpacing(8)
 
         self.project_name.setObjectName("projectTitle")
