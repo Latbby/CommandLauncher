@@ -89,15 +89,19 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(QLabel("Global Commands"))
         content_layout.addWidget(self.global_commands)
         self.add_global_button = QPushButton("Add Global Command")
+        self.edit_global_button = QPushButton("Edit Global Command")
         self.delete_global_button = QPushButton("Delete Global Command")
         content_layout.addWidget(self.add_global_button)
+        content_layout.addWidget(self.edit_global_button)
         content_layout.addWidget(self.delete_global_button)
 
         content_layout.addWidget(QLabel("Project Commands"))
         content_layout.addWidget(self.project_commands)
         self.add_project_command_button = QPushButton("Add Project Command")
+        self.edit_project_command_button = QPushButton("Edit Project Command")
         self.delete_project_command_button = QPushButton("Delete Project Command")
         content_layout.addWidget(self.add_project_command_button)
+        content_layout.addWidget(self.edit_project_command_button)
         content_layout.addWidget(self.delete_project_command_button)
         root.addWidget(content, 3)
 
@@ -116,6 +120,12 @@ class MainWindow(QMainWindow):
         self.add_global_button.clicked.connect(lambda: self._add_command(global_command=True))
         self.add_project_command_button.clicked.connect(
             lambda: self._add_command(global_command=False)
+        )
+        self.edit_global_button.clicked.connect(
+            lambda: self._edit_command(global_command=True)
+        )
+        self.edit_project_command_button.clicked.connect(
+            lambda: self._edit_command(global_command=False)
         )
         self.delete_global_button.clicked.connect(
             lambda: self._delete_command(global_command=True)
@@ -246,6 +256,38 @@ class MainWindow(QMainWindow):
             self.config.global_commands.append(command)
         elif project:
             project.commands.append(command)
+        self.store.save(self.config)
+        self._render_project(project)
+
+    def _edit_command(self, global_command: bool) -> None:
+        """Edit the selected custom command.
+
+        Args:
+            global_command: True when editing a global command.
+        """
+        project = self._selected_project()
+        command_list = self.global_commands if global_command else self.project_commands
+        item = command_list.currentItem()
+        if not item or (not global_command and not project):
+            return
+
+        commands = self.config.global_commands if global_command else project.commands
+        command_id = item.data(1)
+        command = next((entry for entry in commands if entry.id == command_id), None)
+        if not command:
+            return
+
+        dialog = CommandDialog(command=command, parent=self)
+        if dialog.exec() != CommandDialog.Accepted:
+            return
+
+        name, command_text = dialog.command_values()
+        if not LaunchCommand.is_valid(name, command_text):
+            QMessageBox.warning(self, "Invalid Command", "Name and command are required.")
+            return
+
+        command.name = name
+        command.command = command_text
         self.store.save(self.config)
         self._render_project(project)
 
