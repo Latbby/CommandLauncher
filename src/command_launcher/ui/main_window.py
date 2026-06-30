@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QPointF, Qt, QUrl, Signal
-from PySide6.QtGui import QColor, QDesktopServices, QIcon, QPainter, QPainterPath, QPixmap
+from PySide6.QtCore import QByteArray, Qt, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QIcon, QPainter, QPixmap
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -33,7 +34,7 @@ from command_launcher.ui.styles import DARK_STYLESHEET, LIGHT_STYLESHEET
 
 
 def _github_mark_icon(dark_mode: bool = False) -> QIcon:
-    """绘制 GitHub 标识按钮图标。
+    """根据 GitHub 官方 mark 轮廓绘制仓库入口图标。
 
     Args:
         dark_mode: True 时使用适合深色主题的浅色图标。
@@ -41,41 +42,40 @@ def _github_mark_icon(dark_mode: bool = False) -> QIcon:
     Returns:
         可直接设置到按钮上的 GitHub 标识图标。
     """
-    icon_color = QColor("#f3f4f8" if dark_mode else "#1c1c22")
+    icon_color = "#f3f4f8" if dark_mode else "#24292f"
     pixmap = QPixmap(24, 24)
     pixmap.fill(Qt.transparent)
 
+    svg = f"""
+    <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+      <path fill="{icon_color}" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.65 7.65 0 0 1 8 3.86c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+    </svg>
+    """
+    renderer = QSvgRenderer(QByteArray(svg.encode("utf-8")))
     painter = QPainter(pixmap)
-    painter.setRenderHint(QPainter.Antialiasing)
-    painter.setPen(Qt.NoPen)
-    painter.setBrush(icon_color)
-
-    # 使用圆形头部、双耳和肩部轮廓组合出 GitHub 标识感，避免文字按钮占用空间。
-    mark = QPainterPath()
-    mark.addEllipse(4.2, 5.0, 15.6, 15.2)
-    mark.moveTo(6.5, 7.2)
-    mark.lineTo(7.2, 3.4)
-    mark.lineTo(10.4, 5.2)
-    mark.closeSubpath()
-    mark.moveTo(17.5, 7.2)
-    mark.lineTo(16.8, 3.4)
-    mark.lineTo(13.6, 5.2)
-    mark.closeSubpath()
-    painter.drawPath(mark)
-
-    shoulder = QPainterPath()
-    shoulder.moveTo(8.0, 19.0)
-    shoulder.cubicTo(9.3, 20.3, 14.7, 20.3, 16.0, 19.0)
-    shoulder.cubicTo(15.6, 21.1, 8.4, 21.1, 8.0, 19.0)
-    painter.drawPath(shoulder)
-
-    # 透明的眼部留白让小尺寸下也能看出图标不是普通圆点。
-    painter.setBrush(QColor("#ffffff" if not dark_mode else "#15161a"))
-    painter.drawEllipse(QPointF(9.2, 11.3), 1.0, 1.0)
-    painter.drawEllipse(QPointF(14.8, 11.3), 1.0, 1.0)
-
+    renderer.render(painter)
     painter.end()
     return QIcon(pixmap)
+
+
+class _ThemeSwitch(QSlider):
+    """点击即切换浅色/深色的主题开关。"""
+
+    def mousePressEvent(self, event) -> None:
+        """鼠标左键点击时切换到另一种主题。
+
+        Args:
+            event: Qt 鼠标按下事件。
+
+        Returns:
+            无返回值。
+        """
+        if event.button() == Qt.LeftButton:
+            # 作为二态开关使用，点击任意位置都在 0 和 1 之间切换。
+            self.setValue(0 if self.value() == 1 else 1)
+            event.accept()
+            return
+        super().mousePressEvent(event)
 
 
 # ── 命令列表项控件：名称 + 悬浮编辑/删除 ──────────────────────────
@@ -213,7 +213,7 @@ class MainWindow(QMainWindow):
         self.command_tabs = QTabWidget()
         self.main_splitter = QSplitter()
         self.github_button = QPushButton("")
-        self.theme_switch = QSlider(Qt.Horizontal)
+        self.theme_switch = _ThemeSwitch(Qt.Horizontal)
 
         self._build_layout()
         self._connect_signals()
@@ -388,7 +388,6 @@ class MainWindow(QMainWindow):
         self.theme_switch.valueChanged.connect(self._apply_theme)
 
         self.github_button.setObjectName("githubButton")
-        self.github_button.setProperty("variant", "secondary")
         self.github_button.setFixedSize(34, 30)
         self.github_button.setIconSize(self.github_button.size() * 0.62)
         self.github_button.setToolTip("打开 GitHub 仓库")

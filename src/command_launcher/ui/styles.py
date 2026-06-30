@@ -140,6 +140,17 @@ QPushButton#itemActionBtn {
   font-weight: 500;
 }
 
+QPushButton#githubButton {
+  background: transparent;
+  border: none;
+  padding: 0px;
+}
+
+QPushButton#githubButton:hover {
+  background: transparent;
+  border: none;
+}
+
 /* ── 按钮 ── */
 QPushButton {
   border-radius: 6px;
@@ -374,6 +385,17 @@ QPushButton#itemActionBtn {
   padding: 3px 8px;
   font-size: 12px;
   font-weight: 500;
+}
+
+QPushButton#githubButton {
+  background: transparent;
+  border: none;
+  padding: 0px;
+}
+
+QPushButton#githubButton:hover {
+  background: transparent;
+  border: none;
 }
 
 QPushButton {

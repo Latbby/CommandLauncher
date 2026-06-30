@@ -114,6 +114,7 @@ def test_main_window_corner_tools_open_github_repository(tmp_path, monkeypatch):
 
     assert window.github_button.text() == ""
     assert window.github_button.icon().isNull() is False
+    assert window.github_button.property("variant") is None
     assert window.github_button.toolTip() == "打开 GitHub 仓库"
 
     window.github_button.click()
@@ -122,6 +123,19 @@ def test_main_window_corner_tools_open_github_repository(tmp_path, monkeypatch):
 
     window.close()
     app.processEvents()
+
+
+def test_github_button_renders_as_borderless_logo():
+    """验证 GitHub 入口只展示无边框 logo。
+
+    入参: LIGHT_STYLESHEET
+    出参: GitHub 按钮使用透明背景和无边框样式
+    """
+    from command_launcher.ui.styles import LIGHT_STYLESHEET
+
+    assert "QPushButton#githubButton" in LIGHT_STYLESHEET
+    assert "background: transparent;" in LIGHT_STYLESHEET
+    assert "border: none;" in LIGHT_STYLESHEET
 
 
 def test_main_window_theme_switch_toggles_light_and_dark_styles(tmp_path, monkeypatch):
@@ -154,6 +168,43 @@ def test_main_window_theme_switch_toggles_light_and_dark_styles(tmp_path, monkey
 
     window.theme_switch.setValue(0)
     assert app.styleSheet() == LIGHT_STYLESHEET
+
+    window.close()
+    app.processEvents()
+
+
+def test_theme_switch_click_toggles_to_other_theme(tmp_path, monkeypatch):
+    """验证点击主题开关任意位置会切换到另一种主题。
+
+    入参: 主题开关鼠标左键点击事件
+    出参: 浅色切深色，再次点击切回浅色
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtCore import QEvent, QPointF, Qt
+    from PySide6.QtGui import QMouseEvent
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.config_store import ConfigStore
+    from command_launcher.ui.main_window import MainWindow
+
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow(store=ConfigStore(tmp_path / "config.json"))
+    click_event = QMouseEvent(
+        QEvent.MouseButtonPress,
+        QPointF(2, 2),
+        QPointF(2, 2),
+        QPointF(2, 2),
+        Qt.LeftButton,
+        Qt.LeftButton,
+        Qt.NoModifier,
+    )
+
+    window.theme_switch.mousePressEvent(click_event)
+    assert window.theme_switch.value() == 1
+
+    window.theme_switch.mousePressEvent(click_event)
+    assert window.theme_switch.value() == 0
 
     window.close()
     app.processEvents()
