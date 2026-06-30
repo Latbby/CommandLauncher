@@ -1,3 +1,4 @@
+import os
 import subprocess
 
 import pytest
@@ -26,6 +27,26 @@ def test_build_explorer_command_requests_new_window():
 
     assert executable == "explorer.exe"
     assert args == [r"D:\work\command-launcher"]
+
+
+def test_run_explorer_opens_resolved_project_directory(monkeypatch, tmp_path):
+    """验证资源管理器通过系统文件关联打开真实项目目录。
+
+    Args:
+        monkeypatch: pytest 提供的替换依赖工具。
+        tmp_path: pytest 提供的临时目录。
+    """
+    calls = []
+
+    def fake_startfile(path):
+        calls.append(path)
+
+    monkeypatch.setattr(os, "startfile", fake_startfile, raising=False)
+    runner = CommandRunner()
+
+    runner.run_explorer(str(tmp_path))
+
+    assert calls == [str(tmp_path.resolve())]
 
 
 def test_build_powershell_command_uses_literal_path():

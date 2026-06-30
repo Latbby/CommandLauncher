@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -84,17 +85,18 @@ class CommandRunner:
             creationflags=self._new_console_flags(),
         )
 
-    def run_explorer(self, project_path: str) -> subprocess.Popen:
-        """Open File Explorer at the project directory and return the process handle.
+    def run_explorer(self, project_path: str) -> None:
+        """使用系统文件关联打开项目目录。
 
         Args:
-            project_path: Directory that Explorer should display.
+            project_path: 资源管理器需要打开的项目目录。
 
         Returns:
-            Process handle returned by subprocess.
+            None。
         """
-        executable, args = self.build_explorer(project_path)
-        return subprocess.Popen([executable, *args])
+        # os.startfile 会按 Windows 文件关联打开目录，比 explorer.exe 参数更稳定。
+        os.startfile(str(Path(project_path).resolve()))
+        return None
 
     def run_custom(self, command: str, project_path: str) -> subprocess.Popen:
         """从项目目录启动用户自定义命令。

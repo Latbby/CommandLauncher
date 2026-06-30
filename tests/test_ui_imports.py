@@ -185,3 +185,56 @@ def test_double_click_global_command_runs_from_selected_project(tmp_path, monkey
 
     window.close()
     app.processEvents()
+
+
+def test_explorer_button_opens_selected_project_path(tmp_path, monkeypatch):
+    """验证资源管理器按钮使用当前选中项目目录。
+
+    Args:
+        tmp_path: pytest 提供的临时目录。
+        monkeypatch: pytest 提供的环境变量修改工具。
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.config_store import ConfigStore
+    from command_launcher.models import AppConfig, Project
+    from command_launcher.ui.main_window import MainWindow
+
+    class FakeRunner:
+        """记录资源管理器调用路径的测试运行器。"""
+
+        def __init__(self) -> None:
+            """初始化调用记录。"""
+            self.explorer_calls: list[str] = []
+
+        def run_explorer(self, project_path: str) -> object:
+            """记录资源管理器打开路径。
+
+            Args:
+                project_path: 需要打开的项目目录。
+
+            Returns:
+                测试占位对象。
+            """
+            self.explorer_calls.append(project_path)
+            return object()
+
+    project_dir = tmp_path / "selected-project"
+    project_dir.mkdir()
+    project = Project(name="选中项目", path=str(project_dir))
+    store = ConfigStore(tmp_path / "config.json")
+    store.save(AppConfig(projects=[project], last_selected_project_id=project.id))
+    runner = FakeRunner()
+
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow(store=store, runner=runner)
+
+    # 点击资源管理器按钮时必须使用配置里的项目目录。
+    window.explorer_button.click()
+
+    assert runner.explorer_calls == [str(project_dir)]
+
+    window.close()
+    app.processEvents()
