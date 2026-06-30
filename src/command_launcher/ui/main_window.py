@@ -326,7 +326,7 @@ class MainWindow(QMainWindow):
         self.project_list.clear()
         for project in self.config.projects:
             item = QListWidgetItem(project.name)
-            item.setData(1, project.id)
+            item.setData(Qt.UserRole, project.id)
             self.project_list.addItem(item)
 
     def _select_initial_project(self) -> None:
@@ -338,7 +338,7 @@ class MainWindow(QMainWindow):
 
         for index in range(self.project_list.count()):
             item = self.project_list.item(index)
-            if item.data(1) == selected.id:
+            if item.data(Qt.UserRole) == selected.id:
                 self.project_list.setCurrentItem(item)
                 return
 
@@ -351,7 +351,7 @@ class MainWindow(QMainWindow):
         item = self.project_list.currentItem()
         if not item:
             return None
-        project_id = item.data(1)
+        project_id = item.data(Qt.UserRole)
         return next((p for p in self.config.projects if p.id == project_id), None)
 
     def _project_changed(self) -> None:
@@ -420,7 +420,7 @@ class MainWindow(QMainWindow):
 
         list_item = QListWidgetItem()
         list_item.setSizeHint(item_widget.sizeHint())
-        list_item.setData(1, command.id)
+        list_item.setData(Qt.UserRole, command.id)
         command_list.addItem(list_item)
         command_list.setItemWidget(list_item, item_widget)
 
@@ -437,7 +437,7 @@ class MainWindow(QMainWindow):
 
         for index in range(self.project_list.count()):
             item = self.project_list.item(index)
-            if item.data(1) == project.id:
+            if item.data(Qt.UserRole) == project.id:
                 self.project_list.setCurrentItem(item)
                 break
 

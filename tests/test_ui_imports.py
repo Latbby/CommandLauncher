@@ -251,6 +251,45 @@ def test_command_item_name_aligns_with_command_tab_text(monkeypatch):
     app.processEvents()
 
 
+def test_command_items_store_ids_in_user_role_without_decoration(tmp_path, monkeypatch):
+    """验证命令项 ID 使用 UserRole，避免 DecorationRole 触发左侧图标预留。
+
+    入参: 包含一个全局命令的配置
+    出参: 命令 ID 存在 UserRole，DecorationRole 为空
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.config_store import ConfigStore
+    from command_launcher.models import AppConfig, LaunchCommand, Project
+    from command_launcher.ui.main_window import MainWindow
+
+    project_dir = tmp_path / "selected-project"
+    project_dir.mkdir()
+    project = Project(name="选中项目", path=str(project_dir))
+    command = LaunchCommand(name="打开编辑器", command="code .")
+    store = ConfigStore(tmp_path / "config.json")
+    store.save(
+        AppConfig(
+            projects=[project],
+            global_commands=[command],
+            last_selected_project_id=project.id,
+        )
+    )
+
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow(store=store)
+    item = window.global_command_list.item(0)
+
+    assert item.data(Qt.UserRole) == command.id
+    assert item.data(Qt.DecorationRole) is None
+
+    window.close()
+    app.processEvents()
+
+
 def test_command_list_hover_is_controlled_by_item_widget():
     """验证命令列表禁用原生悬浮背景绘制。
 
@@ -284,6 +323,7 @@ def test_command_tabs_render_global_and_project_commands_separately(tmp_path, mo
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
 
+    from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QApplication
 
     from command_launcher.config_store import ConfigStore
@@ -312,8 +352,8 @@ def test_command_tabs_render_global_and_project_commands_separately(tmp_path, mo
 
     assert window.global_command_list.count() == 1
     assert window.project_command_list.count() == 1
-    assert window.global_command_list.item(0).data(1) == global_command.id
-    assert window.project_command_list.item(0).data(1) == project.commands[0].id
+    assert window.global_command_list.item(0).data(Qt.UserRole) == global_command.id
+    assert window.project_command_list.item(0).data(Qt.UserRole) == project.commands[0].id
 
     window.close()
     app.processEvents()
