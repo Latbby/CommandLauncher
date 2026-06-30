@@ -71,7 +71,7 @@ class MainWindow(QMainWindow):
     def _build_layout(self) -> None:
         """构建左右分栏的现代化主界面布局。"""
         root = QHBoxLayout()
-        root.setContentsMargins(16, 16, 16, 16)
+        root.setContentsMargins(6, 6, 6, 6)
         root.setSpacing(0)
 
         self.main_splitter.setObjectName("mainSplitter")
