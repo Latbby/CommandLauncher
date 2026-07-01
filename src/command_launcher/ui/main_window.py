@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QByteArray, Qt, QUrl, Signal
+from PySide6.QtCore import QByteArray, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QDesktopServices, QIcon, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
@@ -16,10 +16,12 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMainWindow,
+    QMenu,
     QMessageBox,
     QPushButton,
     QSlider,
     QSplitter,
+    QSystemTrayIcon,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -29,7 +31,7 @@ from command_launcher.command_runner import CommandRunner
 from command_launcher.config_store import ConfigStore
 from command_launcher.models import AppConfig, LaunchCommand, Project
 from command_launcher.resources import app_icon_path
-from command_launcher.ui.dialogs import CommandDialog
+from command_launcher.ui.dialogs import CloseConfirmDialog, CommandDialog
 from command_launcher.ui.styles import DARK_STYLESHEET, LIGHT_STYLESHEET
 
 
@@ -179,16 +181,19 @@ class MainWindow(QMainWindow):
         self,
         store: ConfigStore | None = None,
         runner: CommandRunner | None = None,
+        shared_mem: object | None = None,
     ) -> None:
         """加载配置并初始化主窗口控件。
 
         Args:
             store: 可选配置存储，主要用于测试。
             runner: 可选命令运行器，主要用于测试。
+            shared_mem: 单实例检测的共享内存，用于接收恢复信号。
         """
         super().__init__()
         self.store = store or ConfigStore()
         self.runner = runner or CommandRunner()
+        self._shared_mem = shared_mem
         self.config: AppConfig = self.store.load()
 
         self.setWindowTitle("命令启动器")
@@ -217,9 +222,15 @@ class MainWindow(QMainWindow):
 
         self._build_layout()
         self._connect_signals()
-        self._apply_theme(0)
+        # 从配置恢复保存的主题，默认为浅色
+        theme_value = 1 if self.config.theme == "dark" else 0
+        self.theme_switch.blockSignals(True)
+        self.theme_switch.setValue(theme_value)
+        self.theme_switch.blockSignals(False)
+        self._apply_theme(theme_value)
         self._refresh_projects()
         self._select_initial_project()
+        self._setup_tray()
 
     # ── 布局构建 ──────────────────────────────────────────────────
 
@@ -408,6 +419,164 @@ class MainWindow(QMainWindow):
         self.powershell_button.clicked.connect(lambda: self._run_builtin("powershell"))
         self.explorer_button.clicked.connect(lambda: self._run_builtin("explorer"))
 
+    def closeEvent(self, event) -> None:
+        """处理窗口关闭事件 — 根据配置分流：最小化、退出或询问。
+
+        Args:
+            event: Qt 关闭事件。
+        """
+        if self.config.close_action == "minimize":
+            event.ignore()
+            self.hide()
+            return
+
+        if self.config.close_action == "quit":
+            self._do_quit()
+            return
+
+        # close_action == "ask" — 弹出确认对话框
+        dialog = CloseConfirmDialog(parent=self)
+        dialog.exec()
+
+        if dialog.should_minimize():
+            event.ignore()
+            self.hide()
+        else:
+            self._do_quit()
+
+        if dialog.remember_choice():
+            self.config.close_action = (
+                "minimize" if dialog.should_minimize() else "quit"
+            )
+            self.store.save(self.config)
+
+    def _do_quit(self) -> None:
+        """彻底退出应用：隐藏托盘图标并退出事件循环。"""
+        self.tray_icon.hide()
+        QApplication.instance().quit()
+
+    # ── 系统托盘 ──────────────────────────────────────────────────
+
+    def _setup_tray(self) -> None:
+        """创建系统托盘图标。左键弹出命令菜单，右键弹出操作菜单。"""
+        self.tray_icon = QSystemTrayIcon(self)
+        icon_path = app_icon_path()
+        if icon_path.exists():
+            self.tray_icon.setIcon(QIcon(str(icon_path)))
+        else:
+            self.tray_icon.setIcon(QApplication.style().standardIcon(
+                QApplication.style().SP_ComputerIcon
+            ))
+        self.tray_icon.setToolTip("命令启动器")
+
+        # 左键点击弹出命令菜单
+        self.tray_icon.activated.connect(self._on_tray_activated)
+
+        # 首次构建菜单
+        self._rebuild_tray_menu()
+        self.tray_icon.show()
+
+        # 定时检查来自第二个实例的「恢复窗口」信号
+        self._restore_timer = QTimer(self)
+        self._restore_timer.timeout.connect(self._check_restore_signal)
+        self._restore_timer.start(300)  # 每 300ms 检查一次
+
+    def _check_restore_signal(self) -> None:
+        """检查共享内存中的恢复信号，由第二个实例写入。"""
+        if self._shared_mem is None:
+            return
+        if self._shared_mem.lock():
+            try:
+                if self._shared_mem.data()[0] == 1:
+                    self._shared_mem.data()[0] = 0
+                    self._shared_mem.unlock()
+                    self._show_from_tray()
+                    return
+            except Exception:
+                pass
+            self._shared_mem.unlock()
+
+    def _rebuild_tray_menu(self) -> None:
+        """根据当前配置重建托盘菜单（项目 → 命令 层级结构）。"""
+        menu = QMenu()
+
+        # — 项目层级 —
+        for project in self.config.projects:
+            project_menu = menu.addMenu(project.name)
+
+            # 全局命令（每个项目都显示）
+            for cmd in self.config.global_commands:
+                action = project_menu.addAction(f"📋 {cmd.name}")
+                action.triggered.connect(
+                    lambda checked=False, p=project, c=cmd: self._run_from_tray(p, c)
+                )
+
+            # 项目命令
+            if self.config.global_commands and project.commands:
+                project_menu.addSeparator()
+            for cmd in project.commands:
+                action = project_menu.addAction(cmd.name)
+                action.triggered.connect(
+                    lambda checked=False, p=project, c=cmd: self._run_from_tray(p, c)
+                )
+
+            # 如果项目下没有命令，显示提示
+            if not self.config.global_commands and not project.commands:
+                empty = project_menu.addAction("（无命令）")
+                empty.setEnabled(False)
+
+        # 如果没有项目，显示提示
+        if not self.config.projects:
+            empty = menu.addAction("（无项目，请先添加项目目录）")
+            empty.setEnabled(False)
+
+        menu.addSeparator()
+
+        # — 操作项 —
+        show_action = menu.addAction("显示主窗口")
+        show_action.triggered.connect(self._show_from_tray)
+        quit_action = menu.addAction("退出")
+        quit_action.triggered.connect(self._quit_from_tray)
+
+        # 保存引用防止被垃圾回收（不设 setContextMenu，改为手动处理右键）
+        self._tray_menu = menu
+
+    def _on_tray_activated(self, reason: int) -> None:
+        """托盘图标点击处理：左键打开主窗口，右键在图标上方弹出命令菜单。"""
+        if reason == QSystemTrayIcon.DoubleClick:
+            self._show_from_tray()
+        elif reason == QSystemTrayIcon.Trigger:
+            # 左键单击 — 打开主窗口
+            self._show_from_tray()
+        elif reason == QSystemTrayIcon.Context:
+            # 右键单击 — 在托盘图标上方弹出菜单
+            self._rebuild_tray_menu()  # 确保菜单是最新的
+            geo = self.tray_icon.geometry()
+            menu_pos = geo.topLeft()
+            # 将菜单位置偏移到图标左上方
+            menu_pos.setX(menu_pos.x() - self._tray_menu.sizeHint().width())
+            menu_pos.setY(menu_pos.y() - self._tray_menu.sizeHint().height())
+            self._tray_menu.popup(menu_pos)
+
+    def _show_from_tray(self) -> None:
+        """从托盘恢复主窗口。"""
+        self.showNormal()
+        self.activateWindow()
+        self.raise_()
+
+    def _quit_from_tray(self) -> None:
+        """从托盘菜单彻底退出应用。"""
+        self.tray_icon.hide()
+        self.config.close_action = "quit"
+        self.close()
+
+    def _run_from_tray(self, project, command) -> None:
+        """从托盘菜单执行命令。"""
+        try:
+            self.runner.run_custom(command.command, project.path)
+        except Exception as exc:
+            QMessageBox.critical(self, "启动失败", f"{command.command}\n\n{exc}")
+
     def _open_github_repository(self) -> None:
         """打开项目 GitHub 仓库。
 
@@ -433,6 +602,12 @@ class MainWindow(QMainWindow):
         # 右侧位置代表深色模式，其他值回落到浅色模式。
         app.setStyleSheet(DARK_STYLESHEET if value == 1 else LIGHT_STYLESHEET)
         self.github_button.setIcon(_github_mark_icon(dark_mode=value == 1))
+
+        # 持久化主题偏好
+        new_theme = "dark" if value == 1 else "light"
+        if self.config.theme != new_theme:
+            self.config.theme = new_theme
+            self.store.save(self.config)
 
     # ── 项目列表 ──────────────────────────────────────────────────
 
@@ -548,6 +723,7 @@ class MainWindow(QMainWindow):
             return
         project = self.config.add_project(directory)
         self.store.save(self.config)
+        self._rebuild_tray_menu()
         self._refresh_projects()
 
         for index in range(self.project_list.count()):
@@ -564,6 +740,7 @@ class MainWindow(QMainWindow):
         self.config.projects = [p for p in self.config.projects if p.id != project.id]
         self.config.last_selected_project_id = None
         self.store.save(self.config)
+        self._rebuild_tray_menu()
         self._refresh_projects()
         self._select_initial_project()
 
@@ -598,6 +775,7 @@ class MainWindow(QMainWindow):
         elif project:
             project.commands.append(command)
         self.store.save(self.config)
+        self._rebuild_tray_menu()
         self._refresh_command_list()
 
     def _edit_command_by_id(self, command_id: str, is_global: bool) -> None:
@@ -628,6 +806,7 @@ class MainWindow(QMainWindow):
         command.name = name
         command.command = command_text
         self.store.save(self.config)
+        self._rebuild_tray_menu()
         self._refresh_command_list()
 
     def _delete_command_by_id(self, command_id: str, is_global: bool) -> None:
@@ -647,6 +826,7 @@ class MainWindow(QMainWindow):
                 c for c in project.commands if c.id != command_id
             ]
         self.store.save(self.config)
+        self._rebuild_tray_menu()
         self._refresh_command_list()
 
     # ── 命令执行 ──────────────────────────────────────────────────
