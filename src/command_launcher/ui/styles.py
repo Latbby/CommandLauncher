@@ -5,11 +5,20 @@
 """
 
 LIGHT_STYLESHEET = """
+/* ═══ 全局重置：干掉所有原生框架/边框，避免与样式表叠加出脏阴影 ═══ */
+QAbstractScrollArea,
+QFrame,
+QScrollArea,
+QListWidget {
+  border: none;
+  outline: none;
+}
+
 QMainWindow {
   background: #eeede8;
 }
 
-/* ── 面板：无边框，纯白浮在暖纸底色上 ── */
+/* ── 面板：纯白无边框圆角 ── */
 QFrame#sidebarPanel,
 QFrame#contentPanel {
   background: #ffffff;
@@ -76,69 +85,91 @@ QListWidget::item:selected {
   color: #4a4ecf;
 }
 
-/* 命令列表 */
-QTabWidget#commandTabs {
+/* ── 全局命令流式容器 ── */
+QWidget#globalCommandsWidget {
   background: transparent;
 }
 
-QTabWidget#commandTabs::pane {
-  border: none;
-  padding: 0px;
-  margin: 0px;
-}
-
-QTabWidget#commandTabs QTabBar::tab {
+/* 添加全局命令芯片 — 虚线边框与普通命令芯片区分 */
+QPushButton#addGlobalChip {
   background: transparent;
-  color: #8b8896;
-  border: none;
-  padding: 7px 12px;
-  margin-right: 4px;
+  color: #5b5fe3;
+  border: 1.5px dashed #c7d2fe;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: 600;
   font-size: 13px;
+}
+
+QPushButton#addGlobalChip:hover {
+  background: #eef2ff;
+  border-color: #a5b4fc;
+}
+
+/* ── 项目命令卡片 ── */
+
+/* 卡片 — 不设独立背景，与面板融为一体，仅靠边框和强调条区分 */
+QFrame#projectCard {
+  background: #ffffff;
+  border: 1px solid #e8e7e2;
+  border-radius: 8px;
+}
+
+QFrame#projectCard:hover {
+  border-color: #c7c2d6;
+  background: #fcfcfa;
+}
+
+/* 左侧强调条 — 靛蓝色竖线，卡片唯一有色彩的元素 */
+QFrame#cardStripe {
+  background: #5b5fe3;
+  border: none;
+  border-radius: 0px;
+}
+
+/* 命令代码块 — 暖灰，比面板低半级 */
+QFrame#cardCodeBlock {
+  background: #f6f5f1;
+  border: none;
+  border-radius: 4px;
+}
+
+/* 卡片内可切换层叠区域 — 透明占位，高度恒定 */
+QStackedWidget#cardStack {
+  background: transparent;
+  border: none;
+}
+
+/* 卡片标题 — 命令名称，精准克制 */
+QLabel#cardTitle {
+  color: #1c1c22;
+  font-size: 14px;
   font-weight: 600;
 }
 
-QTabWidget#commandTabs QTabBar::tab:selected {
-  color: #4a4ecf;
-  background: #eceafe;
-  border-radius: 5px;
-}
-
-QListWidget#commandList {
-  font-family: "Consolas", "Cascadia Code", "Courier New", monospace;
-  padding: 1px;
-}
-
-QListWidget#commandList::item {
-  padding: 0px;
-  border: none;
-  border-radius: 5px;
-  margin: 0px;
-}
-
-QListWidget#commandList::item:hover {
-  background: transparent;
-}
-
-QListWidget#commandList::item:selected,
-QListWidget#commandList::item:selected:active,
-QListWidget#commandList::item:selected:!active {
-  background: transparent;
-  color: #1c1c22;
-}
-
-/* 命令名称 */
-QLabel#commandName {
-  color: #1c1c22;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-/* ── 列表内操作按钮（编辑/删除，悬浮时出现） ── */
-QPushButton#itemActionBtn {
-  border-radius: 4px;
-  padding: 2px 7px;
+/* 卡片命令文本 — 等宽、次要颜色，代码块内展示 */
+QLabel#cardCommand {
+  color: #5c5a6e;
   font-size: 12px;
+  font-family: "Consolas", "Cascadia Code", "Courier New", monospace;
+}
+
+/* 卡片内操作按钮 */
+QPushButton#cardActionBtn {
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
   font-weight: 500;
+}
+
+/* 项目命令卡片滚动区域 */
+QScrollArea#projectCardsScroll {
+  background: transparent;
+  border: none;
+}
+
+QWidget#projectCardsContainer {
+  background: transparent;
 }
 
 QPushButton#githubButton {
@@ -148,6 +179,17 @@ QPushButton#githubButton {
 }
 
 QPushButton#githubButton:hover {
+  background: transparent;
+  border: none;
+}
+
+QPushButton#settingsButton {
+  background: transparent;
+  border: none;
+  padding: 0px;
+}
+
+QPushButton#settingsButton:hover {
   background: transparent;
   border: none;
 }
@@ -231,6 +273,68 @@ QLineEdit:focus {
   border-color: #5b5fe3;
 }
 
+/* ── 多行命令编辑区 ── */
+QPlainTextEdit {
+  background: #ffffff;
+  border: 1px solid #d4d2cc;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #1c1c22;
+}
+
+QPlainTextEdit:focus {
+  border-color: #5b5fe3;
+}
+
+/* ── 复选框 ── */
+/* 不触碰 ::indicator 子控件——原生勾选标记由系统绘制 */
+QCheckBox {
+  color: #1c1c22;
+  font-size: 13px;
+  spacing: 10px;
+}
+
+/* ── 下拉框 ── */
+/* 不触碰 ::drop-down / ::down-arrow——原生箭头由系统绘制 */
+QComboBox {
+  background: #ffffff;
+  border: 1px solid #d4d2cc;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #1c1c22;
+}
+
+QComboBox:hover {
+  border-color: #b8b5ae;
+}
+
+QComboBox:focus,
+QComboBox:on {
+  border-color: #5b5fe3;
+}
+
+QComboBox QAbstractItemView {
+  background: #ffffff;
+  border: 1px solid #d4d2cc;
+  border-radius: 4px;
+  padding: 4px;
+  selection-background-color: #eceafe;
+  selection-color: #4a4ecf;
+  outline: none;
+}
+
+QComboBox QAbstractItemView::item {
+  padding: 6px 12px;
+  min-height: 28px;
+  border-radius: 4px;
+}
+
+QComboBox QAbstractItemView::item:hover {
+  background: #f5f4f0;
+}
+
 /* ── 主题开关：默认浅色下保持可见的轨道和滑块层级 ── */
 QSlider#themeSwitch {
   min-height: 20px;
@@ -251,6 +355,76 @@ QSlider#themeSwitch::handle:horizontal {
   margin: 1px;
 }
 
+/* ── 设置对话框 ── */
+QDialog#settingsDialog {
+  background: #f8f7f4;
+}
+
+QLabel#settingsTitle {
+  color: #1c1c22;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+QLabel#settingsSubtitle {
+  color: #8b8896;
+  font-size: 12px;
+}
+
+QFrame#settingsCard {
+  background: #ffffff;
+  border: 1px solid #e1dfd8;
+  border-radius: 8px;
+}
+
+QLabel#settingsCardTitle {
+  color: #1c1c22;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+QLabel#settingsCardHint {
+  color: #8b8896;
+  font-size: 12px;
+}
+
+QFrame#settingsCloseActionRow {
+  background: #f8f7f4;
+  border: none;
+  border-radius: 0px;
+}
+
+QComboBox#settingsCloseCombo {
+  min-width: 148px;
+  background: #ffffff;
+  border: 1px solid #d8d6cf;
+  border-radius: 6px;
+  padding: 7px 28px 7px 10px;
+}
+
+QComboBox#settingsCloseCombo:hover {
+  border-color: #c2beb6;
+}
+
+QComboBox#settingsCloseCombo:focus,
+QComboBox#settingsCloseCombo:on {
+  border-color: #5b5fe3;
+}
+
+QComboBox#settingsCloseCombo::drop-down {
+  border: none;
+  background: transparent;
+  width: 26px;
+}
+
+QLabel#settingsFieldLabel {
+  color: #5f5d66;
+  font-size: 12px;
+  font-weight: 600;
+  padding-left: 10px;
+  border: none;
+}
+
 /* ── 状态栏 ── */
 QStatusBar#statusBar {
   background: #eeede8;
@@ -260,6 +434,15 @@ QStatusBar#statusBar {
 """
 
 DARK_STYLESHEET = """
+/* ═══ 全局重置：干掉所有原生框架/边框 ═══ */
+QAbstractScrollArea,
+QFrame,
+QScrollArea,
+QListWidget {
+  border: none;
+  outline: none;
+}
+
 QMainWindow,
 QDialog {
   background: #15161a;
@@ -327,66 +510,91 @@ QListWidget::item:selected {
   color: #f3f4f8;
 }
 
-QTabWidget#commandTabs {
+/* ── 全局命令流式容器 ── */
+QWidget#globalCommandsWidget {
   background: transparent;
 }
 
-QTabWidget#commandTabs::pane {
-  border: none;
-  padding: 0px;
-  margin: 0px;
-}
-
-QTabWidget#commandTabs QTabBar::tab {
+/* 添加全局命令芯片 — 虚线边框与普通命令芯片区分 */
+QPushButton#addGlobalChip {
   background: transparent;
-  color: #a5a7b3;
-  border: none;
-  padding: 7px 12px;
-  margin-right: 4px;
+  color: #7c83ff;
+  border: 1.5px dashed #484c6b;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: 600;
   font-size: 13px;
+}
+
+QPushButton#addGlobalChip:hover {
+  background: #30334a;
+  border-color: #5b6084;
+}
+
+/* ── 项目命令卡片 ── */
+
+/* 卡片 — 不设独立背景，与面板融为一体 */
+QFrame#projectCard {
+  background: #202127;
+  border: 1px solid #343750;
+  border-radius: 8px;
+}
+
+QFrame#projectCard:hover {
+  border-color: #5b6084;
+  background: #262934;
+}
+
+/* 左侧强调条 — 浅靛蓝色竖线 */
+QFrame#cardStripe {
+  background: #7c83ff;
+  border: none;
+  border-radius: 0px;
+}
+
+/* 命令代码块 — 比面板深半级 */
+QFrame#cardCodeBlock {
+  background: #282b38;
+  border: none;
+  border-radius: 4px;
+}
+
+/* 卡片内可切换层叠区域 — 透明占位，高度恒定 */
+QStackedWidget#cardStack {
+  background: transparent;
+  border: none;
+}
+
+/* 卡片标题 — 命令名称 */
+QLabel#cardTitle {
+  color: #f3f4f8;
+  font-size: 14px;
   font-weight: 600;
 }
 
-QTabWidget#commandTabs QTabBar::tab:selected {
-  color: #ffffff;
-  background: #343756;
-  border-radius: 5px;
-}
-
-QListWidget#commandList {
-  font-family: "Consolas", "Cascadia Code", "Courier New", monospace;
-  padding: 1px;
-}
-
-QListWidget#commandList::item {
-  padding: 0px;
-  border: none;
-  border-radius: 5px;
-  margin: 0px;
-}
-
-QListWidget#commandList::item:hover {
-  background: transparent;
-}
-
-QListWidget#commandList::item:selected,
-QListWidget#commandList::item:selected:active,
-QListWidget#commandList::item:selected:!active {
-  background: transparent;
-  color: #f3f4f8;
-}
-
-QLabel#commandName {
-  color: #f3f4f8;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-QPushButton#itemActionBtn {
-  border-radius: 4px;
-  padding: 2px 7px;
+/* 卡片命令文本 — 等宽、次要颜色 */
+QLabel#cardCommand {
+  color: #a5a7c0;
   font-size: 12px;
+  font-family: "Consolas", "Cascadia Code", "Courier New", monospace;
+}
+
+/* 卡片内操作按钮 */
+QPushButton#cardActionBtn {
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
   font-weight: 500;
+}
+
+/* 项目命令卡片滚动区域 */
+QScrollArea#projectCardsScroll {
+  background: transparent;
+  border: none;
+}
+
+QWidget#projectCardsContainer {
+  background: transparent;
 }
 
 QPushButton#githubButton {
@@ -396,6 +604,17 @@ QPushButton#githubButton {
 }
 
 QPushButton#githubButton:hover {
+  background: transparent;
+  border: none;
+}
+
+QPushButton#settingsButton {
+  background: transparent;
+  border: none;
+  padding: 0px;
+}
+
+QPushButton#settingsButton:hover {
   background: transparent;
   border: none;
 }
@@ -473,6 +692,68 @@ QLineEdit:focus {
   border-color: #7c83ff;
 }
 
+/* ── 多行命令编辑区 ── */
+QPlainTextEdit {
+  background: #262832;
+  border: 1px solid #3b3d49;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #f3f4f8;
+}
+
+QPlainTextEdit:focus {
+  border-color: #7c83ff;
+}
+
+/* ── 复选框 ── */
+/* 不触碰 ::indicator 子控件——原生勾选标记由系统绘制 */
+QCheckBox {
+  color: #f3f4f8;
+  font-size: 13px;
+  spacing: 10px;
+}
+
+/* ── 下拉框 ── */
+/* 不触碰 ::drop-down / ::down-arrow——原生箭头由系统绘制 */
+QComboBox {
+  background: #262832;
+  border: 1px solid #3b3d49;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #f3f4f8;
+}
+
+QComboBox:hover {
+  border-color: #565966;
+}
+
+QComboBox:focus,
+QComboBox:on {
+  border-color: #7c83ff;
+}
+
+QComboBox QAbstractItemView {
+  background: #262832;
+  border: 1px solid #3b3d49;
+  border-radius: 4px;
+  padding: 4px;
+  selection-background-color: #343756;
+  selection-color: #f3f4f8;
+  outline: none;
+}
+
+QComboBox QAbstractItemView::item {
+  padding: 6px 12px;
+  min-height: 28px;
+  border-radius: 4px;
+}
+
+QComboBox QAbstractItemView::item:hover {
+  background: #30323e;
+}
+
 QSlider#themeSwitch {
   min-height: 20px;
 }
@@ -490,6 +771,76 @@ QSlider#themeSwitch::handle:horizontal {
   border-radius: 7px;
   width: 14px;
   margin: 1px;
+}
+
+/* ── 设置对话框 ── */
+QDialog#settingsDialog {
+  background: #15161a;
+}
+
+QLabel#settingsTitle {
+  color: #f3f4f8;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+QLabel#settingsSubtitle {
+  color: #a5a7b3;
+  font-size: 12px;
+}
+
+QFrame#settingsCard {
+  background: #1d1f25;
+  border: 1px solid #2d3038;
+  border-radius: 8px;
+}
+
+QLabel#settingsCardTitle {
+  color: #f3f4f8;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+QLabel#settingsCardHint {
+  color: #a5a7b3;
+  font-size: 12px;
+}
+
+QFrame#settingsCloseActionRow {
+  background: #17191f;
+  border: none;
+  border-radius: 0px;
+}
+
+QComboBox#settingsCloseCombo {
+  min-width: 148px;
+  background: #262832;
+  border: 1px solid #3b3d49;
+  border-radius: 6px;
+  padding: 7px 28px 7px 10px;
+}
+
+QComboBox#settingsCloseCombo:hover {
+  border-color: #565966;
+}
+
+QComboBox#settingsCloseCombo:focus,
+QComboBox#settingsCloseCombo:on {
+  border-color: #7c83ff;
+}
+
+QComboBox#settingsCloseCombo::drop-down {
+  border: none;
+  background: transparent;
+  width: 26px;
+}
+
+QLabel#settingsFieldLabel {
+  color: #c8cad4;
+  font-size: 12px;
+  font-weight: 600;
+  padding-left: 10px;
+  border: none;
 }
 
 QStatusBar#statusBar {

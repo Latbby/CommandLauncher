@@ -26,18 +26,18 @@ def test_app_icon_path_points_to_packaged_icon_asset():
     assert icon_path.exists()
 
 
-def test_main_window_exposes_command_edit_actions(tmp_path, monkeypatch):
-    """验证主窗口暴露基础按钮和命令页签。
+def test_main_window_exposes_builtin_buttons_and_add_global_chip(tmp_path, monkeypatch):
+    """验证主窗口暴露内置按钮，全局命令流式布局中存在添加芯片。
 
     入参: 空配置 + 临时目录
-    出参: 按钮文案正确，添加按钮存在
+    出参: 内置按钮文案正确，添加全局命令芯片在流式布局末尾
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
 
     from PySide6.QtWidgets import QApplication
 
     from command_launcher.config_store import ConfigStore
-    from command_launcher.ui.main_window import MainWindow
+    from command_launcher.ui.main_window import _AddGlobalCommandChip, MainWindow
 
     app = QApplication.instance() or QApplication([])
     window = MainWindow(store=ConfigStore(tmp_path / "config.json"))
@@ -45,10 +45,10 @@ def test_main_window_exposes_command_edit_actions(tmp_path, monkeypatch):
     assert window.cmd_button.text() == "打开命令提示符"
     assert window.powershell_button.text() == "打开 PowerShell"
     assert window.explorer_button.text() == "打开资源管理器"
-    assert window.add_command_button.text() == "添加"
-    assert window.add_command_button.menu() is None
-    assert window.command_tabs.tabText(0) == "全局命令"
-    assert window.command_tabs.tabText(1) == "项目命令"
+    # 添加全局命令芯片在流式布局末尾
+    add_chips = window.global_commands_widget.findChildren(_AddGlobalCommandChip)
+    assert len(add_chips) == 1
+    assert add_chips[0].text() == "＋ 添加全局命令"
 
     window.close()
     app.processEvents()
@@ -62,7 +62,8 @@ def test_command_dialog_uses_command_editor_polish(monkeypatch):
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
 
-    from PySide6.QtWidgets import QApplication, QDialogButtonBox
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QApplication, QDialogButtonBox, QPlainTextEdit
 
     from command_launcher.models import LaunchCommand
     from command_launcher.ui.dialogs import CommandDialog
@@ -74,10 +75,15 @@ def test_command_dialog_uses_command_editor_polish(monkeypatch):
 
     assert dialog.windowTitle() == "添加命令"
     assert edit_dialog.windowTitle() == "编辑命令"
-    assert dialog.minimumWidth() == 460
+    assert dialog.minimumWidth() == 760
     assert dialog.name_input.placeholderText() == "例如：启动前端"
     assert dialog.command_input.placeholderText() == "例如：npm run dev"
+    assert dialog.command_input.minimumHeight() == 220
+    assert dialog.command_input.lineWrapMode() == QPlainTextEdit.NoWrap
+    assert dialog.command_input.horizontalScrollBarPolicy() == Qt.ScrollBarAsNeeded
     assert dialog.command_input.font().fixedPitch() is True
+    # 编辑模式：命令文本正确回填
+    assert edit_dialog.command_input.toPlainText() == "npm run dev"
     assert buttons.button(QDialogButtonBox.Ok).text() == "保存"
     assert buttons.button(QDialogButtonBox.Cancel).text() == "取消"
     assert buttons.button(QDialogButtonBox.Ok).property("variant") == "primary"
@@ -85,6 +91,30 @@ def test_command_dialog_uses_command_editor_polish(monkeypatch):
 
     dialog.close()
     edit_dialog.close()
+    app.processEvents()
+
+
+def test_command_dialog_preserves_multiline_command_text(monkeypatch):
+    """验证命令编辑框保存时保留多行命令原文。
+
+    入参: 多行命令文本
+    出参: command_values 返回去除首尾空白但保留中间换行的命令文本
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.ui.dialogs import CommandDialog
+
+    app = QApplication.instance() or QApplication([])
+    dialog = CommandDialog()
+
+    dialog.name_input.setText("启动服务")
+    dialog.command_input.setPlainText("  npm run build\nnpm run dev  ")
+
+    assert dialog.command_values() == ("启动服务", "npm run build\nnpm run dev")
+
+    dialog.close()
     app.processEvents()
 
 
@@ -122,6 +152,91 @@ def test_main_window_corner_tools_open_github_repository(tmp_path, monkeypatch):
     assert opened_urls == ["https://github.com/Latbby/CommandLauncher.git"]
 
     window.close()
+    app.processEvents()
+
+
+def test_settings_dialog_uses_control_panel_cards(monkeypatch):
+    """验证设置对话框使用符合主界面风格的控制面板卡片。
+
+    入参: SettingsDialog
+    出参: 弹窗标题、副标题、设置卡片和关闭行为行存在
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication, QFrame, QLabel
+
+    from command_launcher.ui.dialogs import SettingsDialog
+
+    app = QApplication.instance() or QApplication([])
+    dialog = SettingsDialog()
+
+    labels = dialog.findChildren(QLabel)
+    obj_names = {l.objectName() for l in labels}
+    cards = dialog.findChildren(QFrame, "settingsCard")
+
+    assert dialog.minimumWidth() == 480
+    assert dialog.maximumWidth() == 480
+    assert dialog.objectName() == "settingsDialog"
+    assert "settingsTitle" in obj_names
+    assert "settingsSubtitle" in obj_names
+    assert "settingsCardTitle" in obj_names
+    assert "settingsCardHint" in obj_names
+    assert len(cards) == 2
+    assert dialog.findChild(QFrame, "settingsCloseActionRow") is not None
+
+    dialog.close()
+    app.processEvents()
+
+
+def test_settings_dialog_controls_auto_start_and_close_action(monkeypatch):
+    """验证设置对话框控件的默认值和交互。
+
+    入参: SettingsDialog(auto_start=True, close_action="minimize")
+    出参: 复选框已勾选，下拉框选中对应项，可读取用户选择
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.ui.dialogs import SettingsDialog
+
+    app = QApplication.instance() or QApplication([])
+    dialog = SettingsDialog(auto_start=True, close_action="minimize")
+
+    assert dialog.windowTitle() == "设置"
+    assert dialog.auto_start() is True
+    assert dialog.close_action() == "minimize"
+    # 确认下拉框有 3 个选项
+    assert dialog.close_combo.count() == 3
+    # 确认当前选中项文本正确
+    assert dialog.close_combo.currentText() == "最小化到系统托盘"
+
+    dialog.close()
+    app.processEvents()
+
+
+def test_settings_dialog_close_combo_uses_clean_flat_border(monkeypatch):
+    """验证设置弹窗关闭行为下拉框使用干净的单层边框。
+
+    入参: SettingsDialog 和 LIGHT_STYLESHEET
+    出参: 下拉框具备专用对象名，样式覆盖原生下拉边框
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.ui.dialogs import SettingsDialog
+    from command_launcher.ui.styles import LIGHT_STYLESHEET
+
+    app = QApplication.instance() or QApplication([])
+    dialog = SettingsDialog()
+
+    assert dialog.close_combo.objectName() == "settingsCloseCombo"
+    assert "QComboBox#settingsCloseCombo" in LIGHT_STYLESHEET
+    assert "QComboBox#settingsCloseCombo::drop-down" in LIGHT_STYLESHEET
+    assert "border: none;" in LIGHT_STYLESHEET
+
+    dialog.close()
     app.processEvents()
 
 
@@ -226,16 +341,22 @@ def test_dark_stylesheet_contains_expected_palette():
     assert "#7c83ff" in DARK_STYLESHEET
 
 
-def test_dark_stylesheet_uses_same_command_item_density():
-    """验证深色主题命令列表与浅色主题使用一致密度。
+def test_dark_stylesheet_uses_card_and_chip_selectors():
+    """验证深色主题使用卡片和芯片样式替代旧的命令列表样式。
 
     入参: DARK_STYLESHEET
-    出参: 深色命令名称字号和操作按钮内边距与浅色主题保持一致
+    出参: 深色主题包含 projectCard、cardTitle、addGlobalChip 等新选择器
     """
     from command_launcher.ui.styles import DARK_STYLESHEET
 
-    assert "QLabel#commandName {\n  color: #f3f4f8;\n  font-size: 16px;" in DARK_STYLESHEET
-    assert "padding: 2px 7px;" in DARK_STYLESHEET
+    assert "QFrame#projectCard" in DARK_STYLESHEET
+    assert "QLabel#cardTitle" in DARK_STYLESHEET
+    assert "QLabel#cardCommand" in DARK_STYLESHEET
+    assert "QPushButton#addGlobalChip" in DARK_STYLESHEET
+    assert "QPushButton#cardActionBtn" in DARK_STYLESHEET
+    # 旧选择器已移除
+    assert "QTabWidget#commandTabs" not in DARK_STYLESHEET
+    assert "QListWidget#commandList" not in DARK_STYLESHEET
 
 
 def test_light_stylesheet_styles_theme_switch():
@@ -252,34 +373,45 @@ def test_light_stylesheet_styles_theme_switch():
     assert "background: #5b5fe3;" in LIGHT_STYLESHEET
 
 
-def test_main_window_uses_modern_layout_components(tmp_path, monkeypatch):
-    """验证主窗口使用全局/项目命令页签。
+def test_main_window_uses_flow_layout_for_commands(tmp_path, monkeypatch):
+    """验证主窗口使用流式布局和卡片替代旧的页签列表。
 
     入参: 空配置 + 临时目录
-    出参: 命令页签和两个命令列表存在
+    出参: 全局命令流式容器、项目命令卡片滚动区域和添加按钮存在
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
 
-    from PySide6.QtWidgets import QApplication, QListWidget, QSplitter, QTabWidget
+    from PySide6.QtWidgets import QApplication, QScrollArea, QSplitter
 
     from command_launcher.config_store import ConfigStore
-    from command_launcher.ui.main_window import MainWindow
+    from command_launcher.ui.main_window import (
+        FlowLayout,
+        MainWindow,
+        _AddGlobalCommandChip,
+    )
 
     app = QApplication.instance() or QApplication([])
     window = MainWindow(store=ConfigStore(tmp_path / "config.json"))
 
     # 主布局使用可拖动分栏
     assert isinstance(window.main_splitter, QSplitter)
-    # 命令使用全局/项目页签分别展示
-    assert isinstance(window.command_tabs, QTabWidget)
-    assert isinstance(window.global_command_list, QListWidget)
-    assert isinstance(window.project_command_list, QListWidget)
+    # 全局命令使用流式布局
+    assert isinstance(window.global_commands_flow, FlowLayout)
+    # 添加全局命令芯片存在
+    add_chips = window.global_commands_widget.findChildren(_AddGlobalCommandChip)
+    assert len(add_chips) == 1
+    assert add_chips[0].text() == "＋ 添加全局命令"
+    # 项目命令使用卡片滚动区域（垂直布局）
+    assert isinstance(window.project_cards_scroll, QScrollArea)
+    assert isinstance(window.project_cards_flow, FlowLayout)
+    # 添加项目命令按钮存在
+    assert window.add_project_command_button.text() == "添加项目命令"
 
     # 样式对象名
     assert window.project_name.objectName() == "projectTitle"
     assert window.project_path.objectName() == "projectPath"
     assert window.remove_project_button.property("variant") == "danger"
-    assert window.add_command_button.property("variant") == "secondary"
+    assert window.add_project_command_button.property("variant") == "secondary"
 
     window.close()
     app.processEvents()
@@ -317,11 +449,11 @@ def test_main_window_status_bar_warns_when_project_path_missing(tmp_path, monkey
     app.processEvents()
 
 
-def test_light_stylesheet_contains_modern_selectors():
-    """验证现代化界面依赖的关键样式选择器存在。
+def test_light_stylesheet_contains_card_and_chip_selectors():
+    """验证现代化界面依赖的卡片和芯片样式选择器存在。
 
     入参: 无
-    出参: 面板、按钮变体、命令列表、等宽字体、配色选择器均存在
+    出参: 面板、按钮变体、卡片、芯片、等宽字体、配色选择器均存在
     """
     from command_launcher.ui.styles import LIGHT_STYLESHEET
 
@@ -334,10 +466,15 @@ def test_light_stylesheet_contains_modern_selectors():
     assert 'QPushButton[variant="secondary-fill"]' in LIGHT_STYLESHEET
     assert 'QPushButton[variant="secondary"]' in LIGHT_STYLESHEET
     assert 'QPushButton[variant="danger"]' in LIGHT_STYLESHEET
-    # 命令列表、页签 + 列表内按钮
-    assert "QTabWidget#commandTabs" in LIGHT_STYLESHEET
-    assert "QListWidget#commandList" in LIGHT_STYLESHEET
-    assert "QPushButton#itemActionBtn" in LIGHT_STYLESHEET
+    # 新卡片和芯片选择器
+    assert "QFrame#projectCard" in LIGHT_STYLESHEET
+    assert "QLabel#cardTitle" in LIGHT_STYLESHEET
+    assert "QLabel#cardCommand" in LIGHT_STYLESHEET
+    assert "QPushButton#addGlobalChip" in LIGHT_STYLESHEET
+    assert "QPushButton#cardActionBtn" in LIGHT_STYLESHEET
+    # 旧页签/命令列表选择器已移除
+    assert "QTabWidget#commandTabs" not in LIGHT_STYLESHEET
+    assert "QListWidget#commandList" not in LIGHT_STYLESHEET
     # 签名元素：等宽路径
     assert "QLabel#projectPath" in LIGHT_STYLESHEET
     assert "Consolas" in LIGHT_STYLESHEET
@@ -363,114 +500,151 @@ def test_main_window_uses_compact_panel_spacing(tmp_path, monkeypatch):
     window = MainWindow(store=ConfigStore(tmp_path / "config.json"))
     content_panel = window.findChild(QFrame, "contentPanel")
     content_margins = content_panel.layout().contentsMargins()
-    command_margins = window.command_tabs.parentWidget().layout().contentsMargins()
+    # 全局命令流式容器直接挂在命令区域下
+    global_margins = window.global_commands_widget.layout().contentsMargins()
 
     assert window.main_splitter.handleWidth() == 8
     assert content_margins.left() == 8
     assert content_margins.bottom() == 8
-    assert command_margins.left() == 0
-    assert command_margins.right() == 0
+    # 全局命令流式布局无边距
+    assert global_margins.left() == 0
+    assert global_margins.right() == 0
 
     window.close()
     app.processEvents()
 
 
-def test_command_list_uses_tight_item_spacing_and_larger_rows():
-    """验证命令列表自身和列表项不再叠加大内边距。
+# ── 全局命令芯片测试 ────────────────────────────────────────────
 
-    入参: LIGHT_STYLESHEET
-    出参: 命令列表内边距、命令项边距和命令文字尺寸符合统一紧凑设计
-    """
-    from command_launcher.ui.styles import LIGHT_STYLESHEET
+def test_global_command_chip_click_emits_run(monkeypatch):
+    """验证点击全局命令芯片发出运行信号。
 
-    assert "QListWidget#commandList {\n  font-family" in LIGHT_STYLESHEET
-    assert "padding: 1px;" in LIGHT_STYLESHEET
-    assert "QListWidget#commandList::item {\n  padding: 0px;" in LIGHT_STYLESHEET
-    assert "margin: 0px;" in LIGHT_STYLESHEET
-    assert "QLabel#commandName {\n  color: #1c1c22;\n  font-size: 16px;" in LIGHT_STYLESHEET
-
-
-def test_command_item_widget_uses_unified_compact_layout(monkeypatch):
-    """验证命令项控件使用统一紧凑布局。
-
-    入参: 命令项控件
-    出参: 行控件内边距和最小高度符合全局/项目命令统一样式
+    入参: 全局命令芯片 + 鼠标左键点击
+    出参: 发出 run_requested 信号并携带命令 ID
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
 
     from PySide6.QtWidgets import QApplication
 
-    from command_launcher.ui.main_window import _CommandItemWidget
+    from command_launcher.ui.main_window import _GlobalCommandChip
 
     app = QApplication.instance() or QApplication([])
-    item_widget = _CommandItemWidget("cmd-1", "构建项目")
-    margins = item_widget.layout().contentsMargins()
+    chip = _GlobalCommandChip("global-1", "测试命令")
+    run_requests: list[str] = []
+    chip.run_requested.connect(run_requests.append)
 
-    assert margins.left() == 12
-    assert margins.top() == 6
-    assert margins.right() == 8
-    assert margins.bottom() == 6
-    assert item_widget.minimumHeight() == 42
+    chip.click()
 
-    item_widget.close()
+    assert run_requests == ["global-1"]
+
+    chip.close()
     app.processEvents()
 
 
-def test_command_item_name_aligns_with_command_tab_text(monkeypatch):
-    """验证命令文字去掉前缀并与页签文字左边缘对齐。
+def test_global_command_chip_uses_secondary_fill_variant(monkeypatch):
+    """验证全局命令芯片使用 secondary-fill 变体样式。
 
-    入参: 命令项控件 + LIGHT_STYLESHEET
-    出参: 命令名称没有 > 前缀，命令行左边距与页签文字左边距一致
+    入参: 全局命令芯片
+    出参: variant 属性为 secondary-fill
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.ui.main_window import _GlobalCommandChip
+
+    app = QApplication.instance() or QApplication([])
+    chip = _GlobalCommandChip("cmd-1", "构建项目")
+
+    assert chip.property("variant") == "secondary-fill"
+    assert chip.text() == "构建项目"
+
+    chip.close()
+    app.processEvents()
+
+
+def test_add_global_command_chip_emits_add_requested(monkeypatch):
+    """验证添加全局命令芯片点击发出添加请求。
+
+    入参: 添加全局命令芯片 + 鼠标左键点击
+    出参: 发出 add_requested 信号
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.ui.main_window import _AddGlobalCommandChip
+
+    app = QApplication.instance() or QApplication([])
+    chip = _AddGlobalCommandChip()
+    add_requests: list[bool] = []
+    chip.add_requested.connect(lambda: add_requests.append(True))
+
+    chip.click()
+
+    assert add_requests == [True]
+    assert chip.text() == "＋ 添加全局命令"
+
+    chip.close()
+    app.processEvents()
+
+
+def test_add_global_chip_uses_dashed_border_object_name(monkeypatch):
+    """验证添加全局命令芯片使用专用的虚线边框样式对象名。
+
+    入参: 添加全局命令芯片
+    出参: objectName 为 addGlobalChip，用于虚线边框样式
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.ui.main_window import _AddGlobalCommandChip
+
+    app = QApplication.instance() or QApplication([])
+    chip = _AddGlobalCommandChip()
+
+    assert chip.objectName() == "addGlobalChip"
+
+    chip.close()
+    app.processEvents()
+
+
+# ── 项目命令卡片测试 ────────────────────────────────────────────
+
+def test_project_command_card_displays_name_and_command(monkeypatch):
+    """验证项目命令卡片展示命令名称和命令文本。
+
+    入参: 项目命令卡片
+    出参: 卡片内包含名称标签和命令文本标签
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
 
     from PySide6.QtWidgets import QApplication, QLabel
 
-    from command_launcher.ui.main_window import _CommandItemWidget
-    from command_launcher.ui.styles import LIGHT_STYLESHEET
+    from command_launcher.ui.main_window import _ProjectCommandCard
 
     app = QApplication.instance() or QApplication([])
-    item_widget = _CommandItemWidget("cmd-1", "构建项目")
-    name_label = item_widget.findChild(QLabel, "commandName")
+    card = _ProjectCommandCard("card-1", "启动服务", "npm run dev")
+    labels = card.findChildren(QLabel)
 
-    assert name_label.text() == "构建项目"
-    assert "padding: 7px 12px;" in LIGHT_STYLESHEET
-    assert item_widget.layout().contentsMargins().left() == 12
+    title_texts = [l.text() for l in labels if l.objectName() == "cardTitle"]
+    cmd_texts = [l.text() for l in labels if l.objectName() == "cardCommand"]
 
-    item_widget.close()
+    assert "启动服务" in title_texts
+    assert "npm run dev" in cmd_texts
+    assert card.objectName() == "projectCard"
+    assert card.width() == 278   # 固定卡片宽度
+    assert card.height() == 122  # 固定卡片高度
+
+    card.close()
     app.processEvents()
 
 
-def test_command_item_colors_distinguish_global_and_project(monkeypatch):
-    """验证全局命令和项目命令使用文字颜色区分。
+def test_project_command_card_click_emits_run(monkeypatch):
+    """验证点击项目命令卡片发出运行信号。
 
-    入参: 全局命令项控件 + 项目命令项控件
-    出参: 全局命令使用上方页签的弱化色，项目命令使用主文本色
-    """
-    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
-
-    from PySide6.QtWidgets import QApplication, QLabel
-
-    from command_launcher.ui.main_window import _CommandItemWidget
-
-    app = QApplication.instance() or QApplication([])
-    global_item = _CommandItemWidget("global-1", "全局命令", is_global=True)
-    project_item = _CommandItemWidget("project-1", "项目命令", is_global=False)
-    global_label = global_item.findChild(QLabel, "commandName")
-    project_label = project_item.findChild(QLabel, "commandName")
-
-    assert "color: #8b8896;" in global_label.styleSheet()
-    assert project_label.styleSheet() == ""
-
-    global_item.close()
-    project_item.close()
-    app.processEvents()
-
-
-def test_command_item_single_click_requests_run(monkeypatch):
-    """验证单击命令项即可触发运行请求。
-
-    入参: 命令项控件 + 鼠标左键单击事件
+    入参: 项目命令卡片 + 鼠标左键点击
     出参: 发出 run_requested 信号并携带命令 ID
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
@@ -479,108 +653,108 @@ def test_command_item_single_click_requests_run(monkeypatch):
     from PySide6.QtGui import QMouseEvent
     from PySide6.QtWidgets import QApplication
 
-    from command_launcher.ui.main_window import _CommandItemWidget
+    from command_launcher.ui.main_window import _ProjectCommandCard
 
     app = QApplication.instance() or QApplication([])
-    item_widget = _CommandItemWidget("cmd-1", "构建项目")
+    card = _ProjectCommandCard("card-1", "启动服务", "npm run dev")
     run_requests: list[str] = []
-    item_widget.run_requested.connect(run_requests.append)
+    card.run_requested.connect(run_requests.append)
 
     event = QMouseEvent(
         QEvent.MouseButtonPress,
-        QPointF(2, 2),
-        QPointF(2, 2),
-        QPointF(2, 2),
+        QPointF(10, 10),
+        QPointF(10, 10),
+        QPointF(10, 10),
         Qt.LeftButton,
         Qt.LeftButton,
         Qt.NoModifier,
     )
-    item_widget.mousePressEvent(event)
+    card.mousePressEvent(event)
 
-    assert run_requests == ["cmd-1"]
+    assert run_requests == ["card-1"]
 
-    item_widget.close()
+    card.close()
     app.processEvents()
 
 
-def test_command_items_store_ids_in_user_role_without_decoration(tmp_path, monkeypatch):
-    """验证命令项 ID 使用 UserRole，避免 DecorationRole 触发左侧图标预留。
+def test_project_command_card_hover_toggles_action_buttons(monkeypatch):
+    """验证项目命令卡片悬浮时原地替换为操作按钮。
 
-    入参: 包含一个全局命令的配置
-    出参: 命令 ID 存在 UserRole，DecorationRole 为空
+    入参: 项目命令卡片 + 鼠标进入/离开事件
+    出参: 堆叠控件在悬浮时切换到按钮面板，离开后切回代码块
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
 
-    from PySide6.QtCore import Qt
+    from PySide6.QtCore import QPointF
+    from PySide6.QtGui import QEnterEvent
     from PySide6.QtWidgets import QApplication
 
-    from command_launcher.config_store import ConfigStore
-    from command_launcher.models import AppConfig, LaunchCommand, Project
-    from command_launcher.ui.main_window import MainWindow
-
-    project_dir = tmp_path / "selected-project"
-    project_dir.mkdir()
-    project = Project(name="选中项目", path=str(project_dir))
-    command = LaunchCommand(name="打开编辑器", command="code .")
-    store = ConfigStore(tmp_path / "config.json")
-    store.save(
-        AppConfig(
-            projects=[project],
-            global_commands=[command],
-            last_selected_project_id=project.id,
-        )
-    )
+    from command_launcher.ui.main_window import _ProjectCommandCard
 
     app = QApplication.instance() or QApplication([])
-    window = MainWindow(store=store)
-    item = window.global_command_list.item(0)
+    card = _ProjectCommandCard("card-1", "构建项目", "npm run build")
 
-    assert item.data(Qt.UserRole) == command.id
-    assert item.data(Qt.DecorationRole) is None
+    # 初始状态：显示命令代码块（第 0 层）
+    assert card._stack.currentIndex() == 0
 
-    window.close()
+    # 鼠标进入：原地替换为操作按钮面板（第 1 层）
+    card.enterEvent(QEnterEvent(QPointF(), QPointF(), QPointF()))
+    assert card._stack.currentIndex() == 1
+
+    # 鼠标离开：恢复显示命令代码块
+    card.leaveEvent(None)
+    assert card._stack.currentIndex() == 0
+
+    card.close()
     app.processEvents()
 
 
-def test_command_list_hover_is_controlled_by_item_widget():
-    """验证命令列表禁用原生悬浮背景绘制。
+def test_project_command_card_edit_button_emits_signal(monkeypatch):
+    """验证项目命令卡片编辑按钮发出编辑信号。
 
-    入参: LIGHT_STYLESHEET
-    出参: commandList 显式覆盖通用 QListWidget::item:hover 为透明背景
-    """
-    from command_launcher.ui.styles import LIGHT_STYLESHEET
-
-    assert "QListWidget#commandList::item:hover" in LIGHT_STYLESHEET
-    assert "background: transparent;" in LIGHT_STYLESHEET
-
-
-def test_command_list_disables_native_selection_background():
-    """验证命令列表禁用原生选中背景绘制。
-
-    入参: LIGHT_STYLESHEET
-    出参: commandList 显式覆盖通用 QListWidget::item:selected 为透明背景
-    """
-    from command_launcher.ui.styles import LIGHT_STYLESHEET
-
-    assert "QListWidget#commandList::item:selected" in LIGHT_STYLESHEET
-    assert "QListWidget#commandList::item:selected:active" in LIGHT_STYLESHEET
-    assert "QListWidget#commandList::item:selected:!active" in LIGHT_STYLESHEET
-
-
-def test_command_tabs_render_global_and_project_commands_separately(tmp_path, monkeypatch):
-    """验证全局命令和项目命令分别展示在对应页签。
-
-    入参: 包含一个全局命令和一个项目命令的配置
-    出参: 全局列表和项目列表各显示自己的命令
+    入参: 项目命令卡片 + 悬浮后点击编辑按钮
+    出参: 发出 edit_requested 信号并携带命令 ID
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
 
-    from PySide6.QtCore import Qt
+    from PySide6.QtCore import QPointF
+    from PySide6.QtGui import QEnterEvent
+    from PySide6.QtWidgets import QApplication, QPushButton
+
+    from command_launcher.ui.main_window import _ProjectCommandCard
+
+    app = QApplication.instance() or QApplication([])
+    card = _ProjectCommandCard("card-1", "启动服务", "npm run dev")
+    edit_requests: list[str] = []
+    card.edit_requested.connect(edit_requests.append)
+
+    # 先悬浮以切换到按钮面板
+    card.enterEvent(QEnterEvent(QPointF(), QPointF(), QPointF()))
+    # 找到按钮面板中的编辑按钮并点击
+    edit_btn = card.findChildren(QPushButton, "cardActionBtn")[0]
+    edit_btn.click()
+
+    assert edit_requests == ["card-1"]
+
+    card.close()
+    app.processEvents()
+
+
+# ── 全局命令和项目命令数据分离测试 ──────────────────────────────
+
+def test_global_and_project_commands_rendered_in_respective_containers(tmp_path, monkeypatch):
+    """验证全局命令以芯片展示，项目命令以卡片展示。
+
+    入参: 包含一个全局命令和一个项目命令的配置
+    出参: 全局命令在流式布局中，项目命令在卡片区域中
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
     from PySide6.QtWidgets import QApplication
 
     from command_launcher.config_store import ConfigStore
     from command_launcher.models import AppConfig, LaunchCommand, Project
-    from command_launcher.ui.main_window import MainWindow
+    from command_launcher.ui.main_window import _GlobalCommandChip, _ProjectCommandCard, MainWindow
 
     project_dir = tmp_path / "selected-project"
     project_dir.mkdir()
@@ -602,20 +776,53 @@ def test_command_tabs_render_global_and_project_commands_separately(tmp_path, mo
     app = QApplication.instance() or QApplication([])
     window = MainWindow(store=store)
 
-    assert window.global_command_list.count() == 1
-    assert window.project_command_list.count() == 1
-    assert window.global_command_list.item(0).data(Qt.UserRole) == global_command.id
-    assert window.project_command_list.item(0).data(Qt.UserRole) == project.commands[0].id
+    # 全局命令以芯片展示（+1 是添加按钮）
+    global_chips = window.global_commands_widget.findChildren(_GlobalCommandChip)
+    assert len(global_chips) == 1
+    assert global_chips[0].text() == "打开编辑器"
+
+    # 项目命令以卡片展示
+    project_cards = window.project_cards_widget.findChildren(_ProjectCommandCard)
+    assert len(project_cards) == 1
 
     window.close()
     app.processEvents()
 
 
-def test_add_command_button_uses_current_command_tab(tmp_path, monkeypatch):
-    """验证添加按钮根据当前页签决定命令类型。
+def test_add_global_chip_triggers_global_command_dialog(tmp_path, monkeypatch):
+    """验证添加全局命令芯片触发添加全局命令。
 
-    入参: 切换全局/项目页签并点击添加按钮
-    出参: 分别触发添加全局命令和添加项目命令
+    入参: 点击添加全局命令芯片
+    出参: _add_command 被调用并传入 global_command=True
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.config_store import ConfigStore
+    from command_launcher.ui.main_window import _AddGlobalCommandChip, MainWindow
+
+    calls: list[bool] = []
+
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow(store=ConfigStore(tmp_path / "config.json"))
+    window._add_command = calls.append
+
+    # 获取流式布局中的添加全局命令芯片并点击
+    add_chips = window.global_commands_widget.findChildren(_AddGlobalCommandChip)
+    add_chips[0].click()
+
+    assert calls == [True]
+
+    window.close()
+    app.processEvents()
+
+
+def test_add_project_command_button_triggers_project_command_dialog(tmp_path, monkeypatch):
+    """验证添加项目命令按钮触发添加项目命令。
+
+    入参: 点击添加项目命令按钮
+    出参: _add_command 被调用并传入 global_command=False
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
 
@@ -630,67 +837,27 @@ def test_add_command_button_uses_current_command_tab(tmp_path, monkeypatch):
     window = MainWindow(store=ConfigStore(tmp_path / "config.json"))
     window._add_command = calls.append
 
-    window.command_tabs.setCurrentIndex(0)
-    window.add_command_button.click()
-    window.command_tabs.setCurrentIndex(1)
-    window.add_command_button.click()
+    window.add_project_command_button.click()
 
-    assert calls == [True, False]
+    assert calls == [False]
 
     window.close()
     app.processEvents()
 
 
-def test_command_item_hover_only_toggles_action_buttons(monkeypatch):
-    """验证命令项悬浮时只显示操作按钮，不渲染悬浮背景色。
-
-    入参: 命令项控件 + 鼠标进入/离开事件
-    出参: 操作按钮显示状态切换，控件背景色保持不变
-    """
-    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
-
-    from PySide6.QtCore import QPointF
-    from PySide6.QtGui import QEnterEvent, QPalette
-    from PySide6.QtWidgets import QApplication, QPushButton
-
-    from command_launcher.ui.main_window import _CommandItemWidget
-
-    app = QApplication.instance() or QApplication([])
-    item_widget = _CommandItemWidget("cmd-1", "构建项目")
-    action_buttons = item_widget.findChildren(QPushButton, "itemActionBtn")
-    initial_color = item_widget.palette().color(QPalette.Window)
-
-    item_widget.enterEvent(QEnterEvent(QPointF(), QPointF(), QPointF()))
-    hovered_color = item_widget.palette().color(QPalette.Window)
-
-    assert all(not button.isHidden() for button in action_buttons)
-    assert hovered_color == initial_color
-
-    item_widget.leaveEvent(None)
-    left_color = item_widget.palette().color(QPalette.Window)
-
-    assert all(button.isHidden() for button in action_buttons)
-    assert left_color == initial_color
-
-    item_widget.close()
-    app.processEvents()
-
-
 def test_click_global_command_runs_from_selected_project(tmp_path, monkeypatch):
-    """验证命令通过 _CommandItemWidget 单击运行回调正确触发。
+    """验证全局命令芯片点击后从选中项目目录运行。
 
     入参: 包含全局命令和项目的配置
     出参: 全局命令从项目目录启动
     """
     monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
 
-    from PySide6.QtCore import QEvent, QPointF, Qt
-    from PySide6.QtGui import QMouseEvent
     from PySide6.QtWidgets import QApplication
 
     from command_launcher.config_store import ConfigStore
     from command_launcher.models import AppConfig, LaunchCommand, Project
-    from command_launcher.ui.main_window import MainWindow
+    from command_launcher.ui.main_window import _GlobalCommandChip, MainWindow
 
     class FakeRunner:
         """记录自定义命令调用参数的测试运行器。"""
@@ -719,18 +886,9 @@ def test_click_global_command_runs_from_selected_project(tmp_path, monkeypatch):
     app = QApplication.instance() or QApplication([])
     window = MainWindow(store=store, runner=runner)
 
-    # 获取全局命令列表中的 _CommandItemWidget
-    item_widget = window.global_command_list.itemWidget(window.global_command_list.item(0))
-    event = QMouseEvent(
-        QEvent.MouseButtonPress,
-        QPointF(2, 2),
-        QPointF(2, 2),
-        QPointF(2, 2),
-        Qt.LeftButton,
-        Qt.LeftButton,
-        Qt.NoModifier,
-    )
-    item_widget.mousePressEvent(event)
+    # 获取全局命令芯片并点击
+    chip = window.global_commands_widget.findChildren(_GlobalCommandChip)[0]
+    chip.click()
 
     assert runner.custom_calls == [("code .", str(project_dir))]
 
@@ -777,4 +935,101 @@ def test_explorer_button_opens_selected_project_path(tmp_path, monkeypatch):
     assert runner.explorer_calls == [str(project_dir)]
 
     window.close()
+    app.processEvents()
+
+
+def test_project_commands_hidden_when_no_project_selected(tmp_path, monkeypatch):
+    """验证无项目选中时隐藏项目命令区域。
+
+    入参: 无项目配置
+    出参: 项目命令标题、卡片区域和添加按钮隐藏
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication
+
+    from command_launcher.config_store import ConfigStore
+    from command_launcher.ui.main_window import MainWindow
+
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow(store=ConfigStore(tmp_path / "config.json"))
+
+    assert window.project_commands_title.isHidden() or not window.project_commands_title.isVisible()
+    assert window.project_cards_scroll.isHidden() or not window.project_cards_scroll.isVisible()
+    assert window.add_project_command_button.isHidden() or not window.add_project_command_button.isVisible()
+
+    window.close()
+    app.processEvents()
+
+
+def test_add_global_chip_styled_with_dashed_border():
+    """验证添加全局命令芯片样式使用虚线边框。
+
+    入参: LIGHT_STYLESHEET
+    出参: addGlobalChip 选择器包含 dashed 边框样式
+    """
+    from command_launcher.ui.styles import LIGHT_STYLESHEET
+
+    assert "QPushButton#addGlobalChip" in LIGHT_STYLESHEET
+    assert "dashed" in LIGHT_STYLESHEET
+
+
+def test_project_card_styled_with_rounded_corners():
+    """验证项目命令卡片使用圆角、边框、强调条和代码块样式。
+
+    入参: LIGHT_STYLESHEET
+    出参: projectCard、cardStripe、cardCodeBlock 选择器存在
+    """
+    from command_launcher.ui.styles import LIGHT_STYLESHEET
+
+    assert "QFrame#projectCard" in LIGHT_STYLESHEET
+    assert "border-radius: 8px;" in LIGHT_STYLESHEET
+    assert "border: 1px solid" in LIGHT_STYLESHEET
+    # 签名元素：左侧强调条
+    assert "QFrame#cardStripe" in LIGHT_STYLESHEET
+    assert "background: #5b5fe3;" in LIGHT_STYLESHEET
+    # 命令代码块
+    assert "QFrame#cardCodeBlock" in LIGHT_STYLESHEET
+    # 设置对话框样式
+    assert "QLabel#settingsTitle" in LIGHT_STYLESHEET
+    assert "QLabel#settingsSubtitle" in LIGHT_STYLESHEET
+    assert "QFrame#settingsCard" in LIGHT_STYLESHEET
+    assert "QFrame#settingsCloseActionRow" in LIGHT_STYLESHEET
+    assert "QLabel#settingsCardHint" in LIGHT_STYLESHEET
+    assert "QCheckBox" in LIGHT_STYLESHEET
+    assert "QComboBox" in LIGHT_STYLESHEET
+
+
+def test_flow_layout_wraps_items_to_next_row(monkeypatch):
+    """验证 FlowLayout 在空间不足时自动换行。
+
+    入参: FlowLayout + 两个按钮
+    出参: 布局的 heightForWidth 在宽度足够时低，在宽度不够时高（换行）
+    """
+    monkeypatch.setenv("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication, QPushButton
+
+    from command_launcher.ui.main_window import FlowLayout
+
+    app = QApplication.instance() or QApplication([])
+    container = QPushButton()  # 用作父控件
+    flow = FlowLayout(container)
+    btn1 = QPushButton("命令 A")
+    btn2 = QPushButton("命令 B")
+    flow.addWidget(btn1)
+    flow.addWidget(btn2)
+
+    # 宽度足够时单行高度
+    single_row_height = flow.heightForWidth(500)
+    # 宽度很小时强制换行，高度应大于单行
+    wrapped_height = flow.heightForWidth(50)
+
+    assert wrapped_height > single_row_height
+
+    flow.removeWidget(btn1)
+    flow.removeWidget(btn2)
+    btn1.close()
+    btn2.close()
+    container.close()
     app.processEvents()
