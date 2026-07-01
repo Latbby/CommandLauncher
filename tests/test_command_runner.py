@@ -92,6 +92,26 @@ def test_run_custom_opens_visible_cmd_window_in_project_directory(monkeypatch):
     assert calls[0][1]["creationflags"] == 16
 
 
+def test_run_custom_normalizes_multiline_command_for_execution(monkeypatch):
+    """验证多行编辑文本执行前会合并为单行命令。
+
+    Args:
+        monkeypatch: pytest 提供的替换依赖工具。
+    """
+    calls = []
+
+    def fake_popen(*args, **kwargs):
+        calls.append((args, kwargs))
+        return object()
+
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
+    runner = CommandRunner()
+
+    runner.run_custom("npm run build\nnpm run dev", r"D:\work\command-launcher")
+
+    assert calls[0][0] == (["cmd.exe", "/K", "npm run build npm run dev"],)
+
+
 def test_run_cmd_requests_new_console_on_each_click(monkeypatch):
     calls = []
     monkeypatch.setattr(subprocess, "CREATE_NEW_CONSOLE", 16, raising=False)

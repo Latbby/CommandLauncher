@@ -114,6 +114,9 @@ class CommandRunner:
         if not command.strip():
             raise ValueError("Command text cannot be empty")
 
+        # 换行合并为空格——用户在多行编辑区换行仅为排版，不应拆散命令
+        command = " ".join(command.splitlines())
+
         # 使用 cmd /K 保留命令窗口，避免短命令执行后立刻关闭导致用户误以为无响应。
         return subprocess.Popen(
             ["cmd.exe", "/K", command],
