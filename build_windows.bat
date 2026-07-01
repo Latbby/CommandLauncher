@@ -73,6 +73,7 @@ echo.
 echo 打包完成:
 echo dist\命令启动器.exe
 echo.
+call :cleanup_build_temp
 pause
 popd
 endlocal
@@ -112,7 +113,13 @@ goto fail
 
 :fail
 echo.
+call :cleanup_build_temp
 pause
 popd
 endlocal
 exit /b 1
+
+:cleanup_build_temp
+rem 清理本脚本为 TEMP/TMP 创建的临时目录，保留 pip-cache 以加速下次打包。
+if defined BUILD_TMP if exist "%BUILD_TMP%\temp" rmdir /s /q "%BUILD_TMP%\temp"
+exit /b 0

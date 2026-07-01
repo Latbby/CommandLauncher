@@ -17,12 +17,6 @@ python -m pip install -e ".[dev]"
 command-launcher
 ```
 
-## 测试
-
-```bash
-python -m pytest
-```
-
 ## 打包
 
 Windows 下推荐双击运行：
