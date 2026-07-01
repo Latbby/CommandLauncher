@@ -29,7 +29,7 @@ build_windows.bat
 脚本会自动安装依赖并生成：
 
 ```text
-dist\CommandLauncher.exe
+dist\命令启动器.exe
 ```
 
 构建 Windows 单文件 exe：

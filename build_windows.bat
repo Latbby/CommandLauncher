@@ -63,7 +63,7 @@ if errorlevel 1 goto install_failed
 
 echo.
 echo [4/4] 打包 Windows exe...
-tasklist /FI "IMAGENAME eq CommandLauncher.exe" 2>nul | find /I "CommandLauncher.exe" >nul
+tasklist /FI "IMAGENAME eq 命令启动器.exe" 2>nul | find /I "命令启动器.exe" >nul
 if not errorlevel 1 goto app_running
 
 %PYTHON_CMD% -m PyInstaller --clean --noconfirm CommandLauncher.spec
@@ -71,7 +71,7 @@ if errorlevel 1 goto build_failed
 
 echo.
 echo 打包完成:
-echo dist\CommandLauncher.exe
+echo dist\命令启动器.exe
 echo.
 pause
 popd
@@ -107,7 +107,7 @@ echo 打包失败。
 goto fail
 
 :app_running
-echo 请先关闭正在运行的 CommandLauncher.exe，然后重新打包。
+echo 请先关闭正在运行的 命令启动器.exe，然后重新打包。
 goto fail
 
 :fail

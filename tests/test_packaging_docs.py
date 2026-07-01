@@ -41,8 +41,8 @@ def test_windows_build_script_packages_windowed_exe_from_repo_root():
     assert "chcp 65001" in script
     assert 'pushd "%~dp0"' in script
     assert "CommandLauncher.spec" in script
-    assert "dist\\CommandLauncher.exe" in script
-    assert "dist\\CommandLauncher\\CommandLauncher.exe" not in script
+    assert "dist\\命令启动器.exe" in script
+    assert "dist\\命令启动器\\命令启动器.exe" not in script
 
 
 def test_windows_build_script_packages_application_icon():
@@ -191,8 +191,8 @@ def test_windows_build_script_checks_running_packaged_app():
     """
     script = Path("build_windows.bat").read_text(encoding="utf-8")
 
-    assert 'tasklist /FI "IMAGENAME eq CommandLauncher.exe"' in script
-    assert '请先关闭正在运行的 CommandLauncher.exe' in script
+    assert 'tasklist /FI "IMAGENAME eq 命令启动器.exe"' in script
+    assert '请先关闭正在运行的 命令启动器.exe' in script
     assert ":app_running" in script
 
 
