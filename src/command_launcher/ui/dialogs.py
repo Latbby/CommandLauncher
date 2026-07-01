@@ -4,10 +4,14 @@ from __future__ import annotations
 
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
+    QHBoxLayout,
+    QLabel,
     QLineEdit,
+    QPushButton,
     QVBoxLayout,
 )
 
@@ -61,3 +65,57 @@ class CommandDialog(QDialog):
             Tuple containing display name and command text.
         """
         return self.name_input.text().strip(), self.command_input.text().strip()
+
+
+class CloseConfirmDialog(QDialog):
+    """关闭窗口确认对话框 — 选择最小化到系统托盘还是退出程序。"""
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("关闭命令启动器")
+        self.setFixedWidth(360)
+
+        message = QLabel("请选择关闭窗口时的操作：")
+        hint = QLabel("最小化后可通过系统托盘图标恢复窗口")
+        hint.setStyleSheet("color: #888; font-size: 12px;")
+
+        self.remember_checkbox = QCheckBox("记住我的选择")
+
+        minimize_btn = QPushButton("最小化到系统托盘")
+        quit_btn = QPushButton("退出程序")
+        minimize_btn.setProperty("variant", "primary")
+        quit_btn.setProperty("variant", "secondary")
+
+        minimize_btn.clicked.connect(self._on_minimize)
+        quit_btn.clicked.connect(self._on_quit)
+
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        button_layout.addWidget(minimize_btn)
+        button_layout.addWidget(quit_btn)
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(message)
+        layout.addWidget(hint)
+        layout.addSpacing(8)
+        layout.addWidget(self.remember_checkbox)
+        layout.addSpacing(12)
+        layout.addLayout(button_layout)
+
+        self._should_minimize = False
+
+    def _on_minimize(self) -> None:
+        self._should_minimize = True
+        self.accept()
+
+    def _on_quit(self) -> None:
+        self._should_minimize = False
+        self.accept()
+
+    def should_minimize(self) -> bool:
+        """返回用户是否选择了最小化。"""
+        return self._should_minimize
+
+    def remember_choice(self) -> bool:
+        """返回用户是否勾选了"记住我的选择"。"""
+        return self.remember_checkbox.isChecked()
