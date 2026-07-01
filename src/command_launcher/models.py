@@ -136,6 +136,8 @@ class AppConfig:
     projects: list[Project] = field(default_factory=list)
     global_commands: list[LaunchCommand] = field(default_factory=list)
     last_selected_project_id: str | None = None
+    theme: str = "light"
+    close_action: str = "ask"
 
     def add_project(self, path: str) -> Project:
         """Add a project path or select the existing project for that path.
@@ -180,6 +182,8 @@ class AppConfig:
             "projects": [project.to_dict() for project in self.projects],
             "globalCommands": [command.to_dict() for command in self.global_commands],
             "lastSelectedProjectId": self.last_selected_project_id,
+            "theme": self.theme,
+            "closeAction": self.close_action,
         }
 
     @classmethod
@@ -202,4 +206,6 @@ class AppConfig:
                 for command in data.get("globalCommands", [])
             ],
             last_selected_project_id=data.get("lastSelectedProjectId"),
+            theme=data.get("theme", "light"),
+            close_action=data.get("closeAction", "ask"),
         )
