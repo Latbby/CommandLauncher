@@ -138,6 +138,7 @@ class AppConfig:
     last_selected_project_id: str | None = None
     theme: str = "light"
     close_action: str = "ask"
+    auto_start: bool = False
 
     def add_project(self, path: str) -> Project:
         """Add a project path or select the existing project for that path.
@@ -184,6 +185,7 @@ class AppConfig:
             "lastSelectedProjectId": self.last_selected_project_id,
             "theme": self.theme,
             "closeAction": self.close_action,
+            "autoStart": self.auto_start,
         }
 
     @classmethod
@@ -208,4 +210,5 @@ class AppConfig:
             last_selected_project_id=data.get("lastSelectedProjectId"),
             theme=data.get("theme", "light"),
             close_action=data.get("closeAction", "ask"),
+            auto_start=data.get("autoStart", False),
         )
