@@ -1,42 +1,54 @@
-# 命令启动器
+# CommandLauncher
 
-使用 Python 和 PySide6 开发的 Windows 命令启动器。
-
-## 开发
-
-```bash
-python -m pip install -e ".[dev]"
-python -m pytest
-command-launcher
-```
+一个 Windows 项目命令启动器，用 Python 和 PySide6 编写。
 
 ## 功能
 
-- 保存项目目录。
-- 从选中的项目目录打开 `cmd`、PowerShell 和资源管理器。
-- 添加所有项目通用的全局命令。
-- 添加当前项目独有的项目命令。
-- 配置保存到 `%APPDATA%\CommandLauncher\config.json`。
+- 保存常用项目目录。
+- 在选中项目目录中打开命令提示符、PowerShell 和资源管理器。
+- 添加全局命令和项目命令。
+- 支持浅色/深色主题。
+- 支持最小化到系统托盘和开机自启。
+
+## 开发运行
+
+```bash
+python -m pip install -e ".[dev]"
+command-launcher
+```
+
+## 测试
+
+```bash
+python -m pytest
+```
 
 ## 打包
 
-推荐在 Windows 中双击运行：
+Windows 下推荐双击运行：
 
 ```text
 build_windows.bat
 ```
 
-脚本会自动安装依赖并生成：
+脚本会安装依赖并生成单文件程序：
 
 ```text
 dist\命令启动器.exe
 ```
 
-构建 Windows 单文件 exe：
+也可以手动执行：
 
 ```bash
 python -m PyInstaller --clean --noconfirm CommandLauncher.spec
 ```
 
-`--clean` 用来清理 PyInstaller 旧缓存，避免 exe 继续沿用旧图标。
-`CommandLauncher.spec` 固定窗口模式、单文件打包、exe 资源管理器图标和运行时窗口图标。
+`CommandLauncher.spec` 用于固定窗口模式、单文件打包、exe 图标和运行时窗口图标。
+
+## 配置
+
+用户配置保存在：
+
+```text
+%APPDATA%\CommandLauncher\config.json
+```
